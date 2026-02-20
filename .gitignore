@@ -1,0 +1,10 @@
+node_modules
+.svelte-kit
+build
+.DS_Store
+.claude
+.github-commit-messages
+*.env
+.vercel
+.playwright-cli
+test-*.png
