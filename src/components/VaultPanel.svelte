@@ -27,6 +27,9 @@
   let editingNameId = $state<string | null>(null);
   let editNameValue = $state('');
 
+  // Reveal seed phrase state
+  let revealedIds = $state<Set<string>>(new Set());
+
   // Duplicate popup state
   let duplicateId = $state<string | null>(null);
   let dupPathType = $state<PathType>('metamask');
@@ -260,8 +263,14 @@
               </div>
 
               <div class="detail-section">
-                <h3 class="text-xs text-muted mb-sm">SEED PHRASE</h3>
-                <MnemonicGrid words={secret.mnemonic.split(' ')} masked={true} />
+                <div class="seed-header">
+                  <h3 class="text-xs text-muted">SEED PHRASE</h3>
+                  <button class="reveal-btn" onclick={() => { const next = new Set(revealedIds); if (next.has(secret.id)) next.delete(secret.id); else next.add(secret.id); revealedIds = next; }}>
+                    <i class="fa-thin {revealedIds.has(secret.id) ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                    {revealedIds.has(secret.id) ? 'Hide' : 'Reveal'}
+                  </button>
+                </div>
+                <MnemonicGrid words={secret.mnemonic.split(' ')} masked={!revealedIds.has(secret.id)} />
               </div>
 
               {#if secret.addresses.length > 0}
@@ -478,6 +487,31 @@
     color: var(--color-text);
     box-shadow: none;
     transform: none;
+  }
+  .seed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+  }
+  .reveal-btn {
+    background: none;
+    border: 1px solid var(--color-border);
+    box-shadow: none;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .reveal-btn:hover {
+    color: var(--color-text);
+    border-color: var(--color-border-dark);
+    box-shadow: none;
+    transform: none;
+  }
+  .reveal-btn i {
+    margin-right: 0.2rem;
   }
   .detail-actions {
     display: flex;
