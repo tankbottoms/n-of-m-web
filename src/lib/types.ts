@@ -17,6 +17,8 @@ export interface SecretRecord {
   id: string;
   name: string;
   createdAt: number;
+  viewedAt?: number;
+  updatedAt?: number;
   mnemonic: string;
   wordCount: WordCount;
   derivationPath: string;

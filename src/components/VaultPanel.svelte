@@ -153,6 +153,19 @@
     return new Date(ts).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
+  function formatDateFull(ts: number): string {
+    const d = new Date(ts);
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+      + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+  }
+
+  async function markViewed(secret: SecretRecord) {
+    const now = Date.now();
+    secret.viewedAt = now;
+    await updateSecret(secret.id, { viewedAt: now });
+    secrets = secrets.map(s => s.id === secret.id ? { ...s, viewedAt: now } : s);
+  }
+
   function formatPathType(pt: string): string {
     if (pt === 'metamask') return 'MetaMask';
     if (pt === 'ledger') return 'Ledger';
@@ -198,10 +211,10 @@
     <div class="vault-list">
       {#each secrets as secret}
         <div class="vault-item" class:expanded={expandedId === secret.id}>
-          <button class="vault-item-header" onclick={() => { expandedId = expandedId === secret.id ? null : secret.id; }}>
+          <button class="vault-item-header" onclick={() => { const opening = expandedId !== secret.id; expandedId = opening ? secret.id : null; if (opening) markViewed(secret); }}>
             <div class="item-info">
               <span class="item-name">{secret.name}</span>
-              <span class="text-xs text-muted">{formatDate(secret.createdAt)}</span>
+              <span class="text-xs text-muted">{formatDateFull(secret.createdAt)}</span>
             </div>
             <div class="item-badges">
               <span class="badge badge-info">{secret.wordCount}W</span>
@@ -228,7 +241,13 @@
                       {secret.name} <i class="fa-thin fa-pen"></i>
                     </button>
                   {/if}
-                  <span class="text-xs text-muted">{formatDate(secret.createdAt)}</span>
+                  <span class="text-xs text-muted">{formatDateFull(secret.createdAt)}</span>
+                  {#if secret.viewedAt}
+                    <span class="text-xs text-muted">Viewed: {formatDateFull(secret.viewedAt)}</span>
+                  {/if}
+                  {#if secret.updatedAt}
+                    <span class="text-xs text-muted">Updated: {formatDateFull(secret.updatedAt)}</span>
+                  {/if}
                 </div>
                 <button
                   class="btn-icon star-btn"
