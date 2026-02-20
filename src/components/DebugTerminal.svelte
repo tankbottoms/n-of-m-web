@@ -1,5 +1,7 @@
 <script lang="ts">
-  let visible = $state(false);
+  import { onMount } from 'svelte';
+
+  let { visible = $bindable(false) }: { visible?: boolean } = $props();
   let logs = $state<{ time: string; type: string; msg: string }[]>([]);
   let logEl: HTMLDivElement;
 
@@ -59,16 +61,12 @@
     delReq.onerror = () => addLog('error', 'Failed to delete IndexedDB');
   }
 
-  $effect(() => {
+  onMount(() => {
     patchLocalStorage();
     patchIndexedDB();
     addLog('info', 'Debug terminal initialized');
   });
 </script>
-
-<button class="debug-toggle" onclick={() => { visible = !visible; }} title="Debug Terminal">
-  <i class="fa-thin fa-terminal"></i>
-</button>
 
 {#if visible}
   <div class="debug-panel">
@@ -104,27 +102,6 @@
 {/if}
 
 <style>
-  .debug-toggle {
-    position: fixed;
-    bottom: 1rem;
-    right: 1rem;
-    z-index: 999;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    background: var(--color-bg);
-    border: 1px solid var(--color-border-dark);
-    box-shadow: 2px 2px 0px var(--color-shadow);
-    cursor: pointer;
-    color: var(--color-text-muted);
-  }
-  .debug-toggle:hover {
-    color: var(--color-text);
-  }
   .debug-panel {
     position: fixed;
     bottom: 3.5rem;

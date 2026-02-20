@@ -1,6 +1,8 @@
 <script lang="ts">
-  let { onNavigate }: {
+  let { onNavigate, onDebugToggle, debugVisible = false }: {
     onNavigate: (mode: 'generate' | 'scan' | 'vault' | 'settings') => void;
+    onDebugToggle?: () => void;
+    debugVisible?: boolean;
   } = $props();
 
   let showExplainer = $state(false);
@@ -21,9 +23,16 @@
     <button onclick={() => onNavigate('vault')}>
       <i class="fa-thin fa-vault"></i> Vault
     </button>
-    <button onclick={() => onNavigate('settings')}>
-      <i class="fa-thin fa-gear"></i> Settings
-    </button>
+    <div class="settings-group">
+      <button onclick={() => onNavigate('settings')}>
+        <i class="fa-thin fa-gear"></i> Settings
+      </button>
+      {#if onDebugToggle}
+        <button class="debug-badge-btn" class:active={debugVisible} onclick={onDebugToggle} title="Debug Terminal">
+          <i class="fa-thin fa-terminal"></i>
+        </button>
+      {/if}
+    </div>
   </div>
 
   <div class="hero-info mt-lg">
@@ -95,6 +104,37 @@
   .hero-actions button {
     min-width: 120px;
   }
+  .settings-group {
+    display: flex;
+    gap: 0.25rem;
+    align-items: stretch;
+  }
+  .settings-group .debug-badge-btn {
+    min-width: 0;
+    width: 38px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    opacity: 0.4;
+    border: 1px solid var(--color-border);
+    box-shadow: 1px 1px 0px var(--color-shadow);
+    background: var(--color-bg);
+    cursor: pointer;
+    font-family: var(--font-mono);
+  }
+  .settings-group .debug-badge-btn.active {
+    opacity: 1;
+    color: var(--color-crypto-text);
+    border-color: var(--color-crypto-text);
+  }
+  .settings-group .debug-badge-btn:hover {
+    opacity: 0.8;
+    box-shadow: 2px 2px 0px var(--color-shadow);
+    transform: translate(-1px, -1px);
+  }
   @media (max-width: 480px) {
     .hero-actions {
       flex-direction: column;
@@ -103,6 +143,15 @@
     .hero-actions button {
       min-width: 0;
       width: 100%;
+    }
+    .settings-group {
+      flex-direction: row;
+    }
+    .settings-group button:first-child {
+      flex: 1;
+    }
+    .settings-group .debug-badge-btn {
+      width: 44px;
     }
   }
   .hero-info {
