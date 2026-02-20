@@ -239,11 +239,11 @@
 {:else}
   <Panel title="Vault ({secrets.length})">
     <div class="vault-list">
-      {#each secrets as secret}
+      {#each secrets as secret, idx}
         <div class="vault-item" class:expanded={expandedId === secret.id}>
           <button class="vault-item-header" onclick={() => { const opening = expandedId !== secret.id; expandedId = opening ? secret.id : null; if (opening) markViewed(secret); }}>
             <div class="item-info">
-              <span class="item-name">{secret.name}</span>
+              <span class="item-name"><span class="position-badge">{String(idx + 1).padStart(3, '0')}</span> {secret.name}</span>
               <span class="text-xs text-muted">{formatDateFull(secret.createdAt)}</span>
             </div>
             <div class="item-badges">
@@ -430,6 +430,12 @@
   }
   .item-name {
     font-weight: 600;
+  }
+  .position-badge {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    margin-right: 0.25rem;
+    font-weight: 400;
   }
   .item-badges {
     display: flex;
