@@ -175,6 +175,33 @@
     return pt.charAt(0).toUpperCase() + pt.slice(1);
   }
 
+  function exportSecret(secret: SecretRecord) {
+    const exportData = {
+      name: secret.name,
+      createdAt: new Date(secret.createdAt).toISOString(),
+      viewedAt: secret.viewedAt ? new Date(secret.viewedAt).toISOString() : null,
+      updatedAt: secret.updatedAt ? new Date(secret.updatedAt).toISOString() : null,
+      mnemonic: secret.mnemonic,
+      wordCount: secret.wordCount,
+      derivationPath: secret.derivationPath,
+      pathType: secret.pathType,
+      addressCount: secret.addressCount,
+      addresses: secret.addresses.map(a => ({ index: a.index, address: a.address })),
+      shamirConfig: secret.shamirConfig,
+      hasPassphrase: secret.hasPassphrase,
+      hasPIN: secret.hasPIN,
+      metadata: secret.metadata,
+    };
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-export.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   $effect(() => {
     loadSecrets();
   });
@@ -292,6 +319,9 @@
                 </button>
                 <button onclick={() => openDuplicatePopup(secret)}>
                   <i class="fa-thin fa-copy"></i> Duplicate
+                </button>
+                <button onclick={() => exportSecret(secret)}>
+                  <i class="fa-thin fa-download"></i> Export
                 </button>
                 <button onclick={() => handleDelete(secret.id)} style="color: var(--color-error);">
                   <i class="fa-thin fa-trash"></i> Delete
