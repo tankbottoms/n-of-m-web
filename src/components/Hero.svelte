@@ -62,6 +62,16 @@
   .hero-actions button {
     min-width: 120px;
   }
+  @media (max-width: 480px) {
+    .hero-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .hero-actions button {
+      min-width: 0;
+      width: 100%;
+    }
+  }
   .hero-info {
     max-width: 450px;
     margin-left: auto;

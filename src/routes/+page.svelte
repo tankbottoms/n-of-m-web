@@ -55,6 +55,11 @@
   .app-wrapper.active {
     margin-top: 0;
   }
+  @media (max-width: 480px) {
+    .app-wrapper {
+      margin-top: 15vh;
+    }
+  }
   .nav-bar {
     display: flex;
     justify-content: space-between;

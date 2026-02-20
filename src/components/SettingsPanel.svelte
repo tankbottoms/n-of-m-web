@@ -190,10 +190,17 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    flex-wrap: wrap;
   }
   .layout-btn {
     min-width: 140px;
     text-align: left;
+  }
+  @media (max-width: 480px) {
+    .layout-btn {
+      min-width: 110px;
+      flex: 1;
+    }
   }
   .layout-desc {
     flex: 1;

@@ -168,6 +168,26 @@
     height: 180px;
     overflow: hidden;
   }
+  @media (max-width: 480px) {
+    .card-qr-section {
+      flex-direction: column;
+      align-items: center;
+    }
+    .share-qr-box {
+      width: 160px;
+      height: 160px;
+    }
+    .qr-right {
+      text-align: center;
+    }
+    .address-row {
+      justify-content: center;
+    }
+    .addr-qr-box {
+      width: 70px;
+      height: 70px;
+    }
+  }
   .share-qr-box img {
     display: block;
     width: 100%;

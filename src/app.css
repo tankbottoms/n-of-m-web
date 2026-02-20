@@ -323,11 +323,21 @@ input:focus, textarea:focus, select:focus {
 /* Responsive */
 @media (max-width: 768px) {
   html { font-size: 13px; }
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.1rem; }
   .container { padding: 0 var(--spacing-md); }
   .terminal-log { max-height: 300px; font-size: 12px; }
+  button, .btn {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+  }
+  input, textarea, select {
+    min-height: 44px;
+  }
 }
 
 @media (max-width: 480px) {
   html { font-size: 12px; }
+  h1 { font-size: 1.3rem; }
   .container { padding: 0 var(--spacing-sm); }
 }

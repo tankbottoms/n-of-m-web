@@ -527,6 +527,7 @@
   .shamir-config {
     display: flex;
     gap: var(--spacing-lg);
+    flex-wrap: wrap;
   }
   .address-count-row, .passphrase-row {
     display: flex;
