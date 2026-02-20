@@ -268,11 +268,6 @@
     margin-right: 0.35rem;
     color: var(--color-accent);
   }
-  .scan-status {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-  }
   .scanned-list {
     display: flex;
     gap: 0.35rem;
