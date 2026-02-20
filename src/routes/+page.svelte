@@ -5,6 +5,7 @@
   import ScanFlow from '../components/ScanFlow.svelte';
   import VaultPanel from '../components/VaultPanel.svelte';
   import SettingsPanel from '../components/SettingsPanel.svelte';
+  import DebugTerminal from '../components/DebugTerminal.svelte';
 
   type Mode = 'home' | 'generate' | 'scan' | 'vault' | 'settings';
   let mode = $state<Mode>('home');
@@ -20,6 +21,7 @@
 </script>
 
 <ThemeToggle />
+<DebugTerminal />
 
 <div class="app-wrapper" class:active={isActive}>
   {#if isActive}
