@@ -160,6 +160,9 @@
   }
   .share-qr-box {
     border: 2px solid var(--color-border-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
     width: 180px;
     height: 180px;
@@ -169,7 +172,7 @@
     display: block;
     width: 100%;
     height: 100%;
-    object-fit: fill;
+    object-fit: contain;
     image-rendering: pixelated;
   }
   .qr-right {
@@ -192,6 +195,9 @@
   }
   .addr-qr-box {
     border: 1px solid var(--color-border-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
     width: 90px;
     height: 90px;
@@ -201,7 +207,7 @@
     display: block;
     width: 100%;
     height: 100%;
-    object-fit: fill;
+    object-fit: contain;
     image-rendering: pixelated;
   }
   .addr-info {
