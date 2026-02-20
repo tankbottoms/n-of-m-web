@@ -2,6 +2,8 @@
   let { onNavigate }: {
     onNavigate: (mode: 'generate' | 'scan' | 'vault' | 'settings') => void;
   } = $props();
+
+  let showExplainer = $state(false);
 </script>
 
 <div class="hero">
@@ -30,6 +32,37 @@
       reconstruct it. Print QR-coded share cards. Scan to recover. Fully offline.
     </p>
   </div>
+
+  <div class="explainer-toggle mt-md">
+    <button class="explainer-btn" onclick={() => { showExplainer = !showExplainer; }}>
+      <i class="fa-thin {showExplainer ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
+      How it works
+    </button>
+  </div>
+
+  {#if showExplainer}
+    <div class="explainer mt-sm">
+      <div class="explainer-section">
+        <h3 class="explainer-heading">Shamir's Secret Sharing</h3>
+        <p>Your seed phrase is split into <b>M</b> distinct shares using a cryptographic algorithm. Any <b>N</b> of those shares (the threshold) can reconstruct the original -- but fewer than N reveals <b>nothing</b>.</p>
+      </div>
+
+      <div class="explainer-section">
+        <h3 class="explainer-heading">Why not just copy the phrase?</h3>
+        <p>A single copy is a single point of failure -- theft or loss means total compromise or permanent lockout. With N-of-M splitting, you distribute trust: no single share holder can access the secret, and you can lose up to M-N shares without losing access.</p>
+      </div>
+
+      <div class="explainer-section">
+        <h3 class="explainer-heading">Local-first / no network</h3>
+        <p>All cryptographic operations run entirely in your browser. No data is ever sent to a server. Entropy, key derivation, Shamir splitting, and QR encoding all happen offline.</p>
+      </div>
+
+      <div class="explainer-section">
+        <h3 class="explainer-heading">The math</h3>
+        <p>The secret is encoded as coefficients of a random polynomial of degree N-1 over <code>GF(2^8)</code> (the Galois field with 256 elements). Each share is a point on this polynomial. Reconstruction uses Lagrange interpolation -- given N points, the unique polynomial (and thus the secret) is recovered exactly.</p>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -76,5 +109,58 @@
     max-width: 450px;
     margin-left: auto;
     margin-right: auto;
+  }
+  .explainer-toggle {
+    text-align: center;
+  }
+  .explainer-btn {
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .explainer-btn:hover {
+    color: var(--color-text);
+    box-shadow: none;
+    transform: none;
+  }
+  .explainer-btn i {
+    margin-right: 0.25rem;
+  }
+  .explainer {
+    text-align: left;
+    max-width: 520px;
+    margin: 0 auto;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-alt);
+    padding: var(--spacing-md);
+  }
+  .explainer-section {
+    margin-bottom: var(--spacing-md);
+  }
+  .explainer-section:last-child {
+    margin-bottom: 0;
+  }
+  .explainer-heading {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text-muted);
+    margin-bottom: 0.3rem;
+  }
+  .explainer p {
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+  .explainer code {
+    font-size: 0.75rem;
+    background: var(--color-hover-bg);
+    padding: 0.1rem 0.3rem;
+    border: 1px solid var(--color-border);
   }
 </style>
