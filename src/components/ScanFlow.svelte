@@ -146,10 +146,25 @@
       </div>
 
       {#if targetId}
-        <div class="scan-status mb-md">
-          <span class="badge badge-info">
-            {scannedShares.length}/{targetThreshold} SHARES SCANNED
-          </span>
+        <div class="shard-progress mb-md">
+          <div class="threshold-indicator">
+            <span class="text-xs text-muted">THRESHOLD</span>
+            <div class="threshold-boxes">
+              {#each Array(targetThreshold) as _, i}
+                <div class="threshold-box" class:filled={i < scannedShares.length}></div>
+              {/each}
+            </div>
+            <span class="text-xs">{scannedShares.length}/{targetThreshold}</span>
+          </div>
+          <div class="shard-slots">
+            <span class="text-xs text-muted">ALL SHARDS</span>
+            <div class="slot-boxes">
+              {#each Array(targetTotal) as _, i}
+                {@const scanned = scannedShares.some(s => s.shareIndex === i + 1)}
+                <div class="slot-box" class:scanned title="Share {i + 1}">{i + 1}</div>
+              {/each}
+            </div>
+          </div>
         </div>
       {/if}
 
@@ -267,6 +282,7 @@
     position: relative;
     width: 100%;
     max-width: 500px;
+    margin: 0 auto;
     aspect-ratio: 4/3;
     background: var(--color-bg-alt);
     border: 1px solid var(--color-border-dark);
@@ -291,6 +307,57 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+  }
+  .shard-progress {
+    border: 1px solid var(--color-border);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--color-bg-alt);
+  }
+  .threshold-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .threshold-boxes {
+    display: flex;
+    gap: 3px;
+  }
+  .threshold-box {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-border-dark);
+    background: var(--color-bg);
+  }
+  .threshold-box.filled {
+    background: var(--color-success);
+  }
+  .shard-slots {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .slot-boxes {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+  .slot-box {
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: var(--color-text-muted);
+    background: var(--color-bg);
+  }
+  .slot-box.scanned {
+    background: var(--color-success-bg);
+    border-color: var(--color-success);
+    color: var(--color-success);
+    font-weight: 600;
   }
   .scan-actions {
     display: flex;
