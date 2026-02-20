@@ -103,7 +103,10 @@
       OF {share.totalShares}. NEED {share.threshold}+ TO RECOVER.
     </div>
     <div class="footer-info">{pinInfo} · {ppInfo}</div>
-    <div class="footer-guid">{share.id}</div>
+    <div class="footer-bottom">
+      <span class="footer-guid">{share.id}</span>
+      <span class="footer-app">n-of-m.vercel.app · v0.1.0</span>
+    </div>
   </div>
 </div>
 
@@ -267,7 +270,16 @@
     color: var(--color-text-muted);
     margin-bottom: 0.15rem;
   }
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
   .footer-guid {
+    font-size: 0.55rem;
+    color: var(--color-text-muted);
+  }
+  .footer-app {
     font-size: 0.55rem;
     color: var(--color-text-muted);
     text-align: right;
