@@ -135,16 +135,23 @@
 {#if state === 'scanning'}
   <Panel title="Scan Share Cards">
     <div class="scan-content">
-      <div class="scan-status mb-md">
-        <span class="badge badge-info">
-          {scannedShares.length}/{targetThreshold || '?'} SHARES SCANNED
-        </span>
-        {#if targetTotal}
-          <span class="text-xs text-muted">
-            Need {targetThreshold} of {targetTotal} total
-          </span>
+      <div class="step-instructions mb-md">
+        <i class="fa-thin fa-circle-info"></i>
+        {#if !targetId}
+          Scan your first share card to begin recovery. The app will detect how many shares are needed.
+        {:else}
+          Scan {targetThreshold - scannedShares.length} more share card{targetThreshold - scannedShares.length !== 1 ? 's' : ''} to reconstruct the secret.
+          Need {targetThreshold} of {targetTotal} total.
         {/if}
       </div>
+
+      {#if targetId}
+        <div class="scan-status mb-md">
+          <span class="badge badge-info">
+            {scannedShares.length}/{targetThreshold} SHARES SCANNED
+          </span>
+        </div>
+      {/if}
 
       {#if scannedShares.length > 0}
         <div class="scanned-list mb-md">
@@ -233,6 +240,18 @@
 <style>
   .scan-content, .pin-content, .recovered-content {
     /* content wrapper */
+  }
+  .step-instructions {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-alt);
+  }
+  .step-instructions i {
+    margin-right: 0.35rem;
+    color: var(--color-accent);
   }
   .scan-status {
     display: flex;

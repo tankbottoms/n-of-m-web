@@ -1,14 +1,15 @@
 <script lang="ts">
   import type { WordCount } from '$lib/types';
   import type { LayoutType } from '$lib/pdf';
+  import { generatePrintHTML, downloadHTML } from '$lib/pdf';
   import { setVaultPassword, hasVaultPassword, removeVaultPassword } from '$lib/storage';
   import Panel from './Panel.svelte';
 
   const WORD_COUNTS: WordCount[] = [12, 15, 18, 21, 24];
-  const LAYOUTS: { key: LayoutType; label: string }[] = [
-    { key: 'full-page', label: 'Full Page' },
-    { key: '2-up', label: 'Compact' },
-    { key: 'wallet-size', label: 'Wallet Size' },
+  const LAYOUTS: { key: LayoutType; label: string; icon: string; description: string }[] = [
+    { key: 'full-page', label: 'Full Page', icon: 'fa-file', description: 'One card per page' },
+    { key: '2-up', label: 'Compact', icon: 'fa-columns', description: 'Two cards per page' },
+    { key: 'wallet-size', label: 'Wallet Size', icon: 'fa-credit-card', description: 'Four cards per page' },
   ];
   const COLORS = ['#A8D8EA', '#FFB7B2', '#FFDAC1', '#B5EAD7', '#C7CEEA', '#E2F0CB', '#F8E6E0', '#D5C4F8'];
 
@@ -40,6 +41,27 @@
   function setColor(color: string) {
     defaultColor = color;
     localStorage.setItem('shamir_pref_color', color);
+  }
+
+  function downloadExample(layoutKey: LayoutType) {
+    // Generate a sample share set for preview
+    const sampleShares = Array.from({ length: 3 }, (_, i) => ({
+      v: 1 as const,
+      id: '00000000-0000-0000-0000-000000000000',
+      name: 'Example Wallet',
+      shareIndex: i + 1,
+      totalShares: 3,
+      threshold: 2,
+      shareData: 'a'.repeat(64),
+      derivationPath: "m/44'/60'/0'/0/{index}",
+      pathType: 'metamask' as const,
+      wordCount: 24 as const,
+      hasPIN: false,
+      hasPassphrase: false,
+    }));
+
+    const html = generatePrintHTML(sampleShares, defaultColor, layoutKey, '0x0000000000000000000000000000000000000000');
+    downloadHTML(html, `example-${layoutKey}.html`);
   }
 
   async function handleSetPassword() {
@@ -75,9 +97,17 @@
   </Panel>
 
   <Panel title="Default PDF Layout">
-    <div class="layout-buttons">
+    <div class="layout-options">
       {#each LAYOUTS as lt}
-        <button class:primary={defaultLayout === lt.key} onclick={() => setLayout(lt.key)}>{lt.label}</button>
+        <div class="layout-option">
+          <button class="layout-btn" class:primary={defaultLayout === lt.key} onclick={() => setLayout(lt.key)}>
+            <i class="fa-thin {lt.icon}"></i> {lt.label}
+          </button>
+          <span class="layout-desc text-xs text-muted">{lt.description}</span>
+          <button class="layout-dl-icon" onclick={() => downloadExample(lt.key)} title="Download example">
+            <i class="fa-thin fa-download"></i>
+          </button>
+        </div>
       {/each}
     </div>
   </Panel>
@@ -146,10 +176,42 @@
     flex-direction: column;
     gap: var(--spacing-md);
   }
-  .word-count-buttons, .layout-buttons {
+  .word-count-buttons {
     display: flex;
     gap: 0.35rem;
     flex-wrap: wrap;
+  }
+  .layout-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .layout-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .layout-btn {
+    min-width: 140px;
+    text-align: left;
+  }
+  .layout-desc {
+    flex: 1;
+  }
+  .layout-dl-icon {
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0.3rem;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    text-transform: none;
+  }
+  .layout-dl-icon:hover {
+    color: var(--color-text);
+    box-shadow: none;
+    transform: none;
   }
   .color-swatches {
     display: flex;

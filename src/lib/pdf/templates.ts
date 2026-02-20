@@ -11,12 +11,10 @@ export function renderCardHTML(
 ): string {
   const now = new Date();
   const date = now.toISOString().replace('T', ' ').slice(0, 16);
-  const truncAddr = firstAddress
-    ? `${firstAddress.slice(0, 10)}...${firstAddress.slice(-8)}`
-    : '';
 
   const pinInfo = share.hasPIN ? 'PIN: ENABLED' : 'PIN: NONE';
   const ppInfo = share.hasPassphrase ? 'PASSPHRASE: ENABLED' : 'PASSPHRASE: NONE';
+  const isCompact = layout.cardsPerPage >= 2;
 
   return `
     <div class="card">
@@ -33,17 +31,20 @@ export function renderCardHTML(
           <p>To reconstruct the secret, collect and scan
           <b>at least ${share.threshold} of the ${share.totalShares} total share cards</b>
           using the Shamir recovery app.</p>
+          ${!isCompact ? `
           <p>During recovery you <u>may need to provide a PIN</u>.
           You <u>may also be asked additional questions</u> about
           your secret&rsquo;s configuration.</p>
           <p><b>Do not store all shares in the same location.</b>
           Each share should be kept <b>secure and separate</b>.</p>
+          ` : ''}
         </div>
       </div>
       <div class="section date-row">
         <div class="section-label">CREATED</div>
         <span class="date-value">${date}</span>
       </div>
+      ${!isCompact ? `
       <div class="section notes-section">
         <div class="section-label">NOTES</div>
         <div class="note-line"></div>
@@ -51,6 +52,7 @@ export function renderCardHTML(
         <div class="note-line"></div>
         <div class="note-line"></div>
       </div>
+      ` : ''}
       <div class="section bottom-section">
         <div class="share-qr">
           <canvas id="qr-${cardId}" width="${layout.qrSize}" height="${layout.qrSize}"></canvas>
@@ -62,19 +64,21 @@ export function renderCardHTML(
             reconstruction process. You will need to scan at
             least <b>${share.threshold}&nbsp;cards</b> total.</p>
           </div>
+          ${!isCompact ? `
           <div class="qr-info-bottom">
             <p><b>Handle with care.</b> If this card is lost or
             damaged you will need the remaining shares to recover
             your secret. <b>There are no backups.</b></p>
           </div>
+          ` : ''}
           ${firstAddress ? `
           <div class="address-row">
             <div class="address-qr-box">
-              <canvas id="addr-qr-${cardId}" width="56" height="56"></canvas>
+              <canvas id="addr-qr-${cardId}" width="${isCompact ? 48 : 80}" height="${isCompact ? 48 : 80}"></canvas>
             </div>
             <div class="address-info">
               <span class="address-label">PRIMARY ADDRESS</span>
-              <span class="address-value">${escapeHTML(truncAddr)}</span>
+              <span class="address-value">${escapeHTML(firstAddress)}</span>
             </div>
           </div>
           ` : ''}
@@ -110,21 +114,28 @@ export function renderPageHTML(
 ): string {
   let pages: string[];
 
-  if (layout.cardsPerPage >= 999) {
-    const cards = shares.map((share, i) =>
-      renderCardHTML(share, qrDatas[i], highlightColor, layout, `card-${i}`, firstAddress)
-    ).join('\n<div style="height:12px;"></div>\n');
-    pages = [`<div class="page wallet-page">${cards}</div>`];
+  if (layout.cardsPerPage === 4) {
+    // Wallet size: 4 cards per page
+    pages = [];
+    for (let i = 0; i < shares.length; i += 4) {
+      const batch = shares.slice(i, i + 4);
+      const cards = batch.map((share, j) =>
+        renderCardHTML(share, qrDatas[i + j], highlightColor, layout, `card-${i + j}`, firstAddress)
+      ).join('\n');
+      pages.push(`<div class="page wallet-page">${cards}</div>`);
+    }
   } else if (layout.cardsPerPage === 2) {
+    // Compact: 2 cards per page
     pages = [];
     for (let i = 0; i < shares.length; i += 2) {
       const card1 = renderCardHTML(shares[i], qrDatas[i], highlightColor, layout, `card-${i}`, firstAddress);
       const card2 = i + 1 < shares.length
         ? renderCardHTML(shares[i + 1], qrDatas[i + 1], highlightColor, layout, `card-${i + 1}`, firstAddress)
         : '';
-      pages.push(`<div class="page compact-page">${card1}\n<div style="height:12px;"></div>\n${card2}</div>`);
+      pages.push(`<div class="page compact-page">${card1}\n${card2}</div>`);
     }
   } else {
+    // Full page: 1 card per page
     pages = shares.map((share, i) => {
       const card = renderCardHTML(share, qrDatas[i], highlightColor, layout, `card-${i}`, firstAddress);
       return `<div class="page">${card}</div>`;
@@ -144,6 +155,7 @@ export function renderPageHTML(
     )
     .join('\n');
 
+  const addrQrSize = layout.cardsPerPage >= 2 ? 48 : 80;
   const addrQrScripts = firstAddress
     ? shares
         .map(
@@ -151,7 +163,7 @@ export function renderPageHTML(
     new QRious({
       element: document.getElementById('addr-qr-card-${i}'),
       value: ${JSON.stringify(firstAddress)},
-      size: 56,
+      size: ${addrQrSize},
       level: 'L'
     });
   `
@@ -165,43 +177,51 @@ export function renderPageHTML(
 <meta charset="utf-8">
 <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"><\/script>
 <style>
-  @page { margin: 10mm; }
+  @page { margin: 10mm; size: portrait; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Courier New', monospace; color: #000; font-size: ${layout.fontSize}px; line-height: 1.4; }
-  .page { page-break-after: always; width: 100%; display: flex; flex-direction: column; align-items: stretch; }
+  .page { page-break-after: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; }
   .page:last-child { page-break-after: auto; }
-  .wallet-page { page-break-after: auto; }
-  .compact-page .card { max-height: 48vh; overflow: hidden; }
-  .compact-page .notes-section { display: none; }
-  .wallet-page .card { overflow: hidden; }
-  .wallet-page .notes-section { display: none; }
-  .wallet-page .instructions-text p:nth-child(n+3) { display: none; }
-  .card { border: 3px solid #000; box-shadow: 6px 6px 0 #000; display: flex; flex-direction: column; width: 100%; overflow: hidden; }
-  .header { padding: 8px 16px; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 3px solid #000; display: flex; justify-content: space-between; align-items: center; }
+
+  /* Full page: card fills the page */
+  .page > .card { flex: 1; display: flex; flex-direction: column; }
+
+  /* Compact: 2 cards, each ~48% of page */
+  .compact-page { gap: 8px; justify-content: flex-start; }
+  .compact-page > .card { flex: 0 0 auto; max-height: 48%; overflow: hidden; }
+
+  /* Wallet: 4 cards, each ~24% of page, no partial spanning */
+  .wallet-page { gap: 6px; justify-content: flex-start; }
+  .wallet-page > .card { flex: 0 0 auto; max-height: 23.5%; overflow: hidden; }
+  .wallet-page .instructions-text { font-size: ${layout.fontSize - 1}px; }
+
+  .card { border: 3px solid #000; box-shadow: 4px 4px 0 #000; display: flex; flex-direction: column; width: 100%; overflow: hidden; }
+  .header { padding: 6px 12px; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 3px solid #000; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .header-title { font-size: 13px; }
   .header-meta { font-size: 9px; letter-spacing: 0.5px; opacity: 0.7; }
-  .section { padding: 10px 16px; border-bottom: 2px solid #000; }
+  .section { padding: 8px 12px; border-bottom: 2px solid #000; flex-shrink: 0; }
   .section-label { font-weight: bold; font-size: 8px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 4px; }
   .instructions-text { font-size: ${layout.fontSize - 0.5}px; line-height: 1.5; }
-  .instructions-text p { margin-bottom: 5px; }
-  .date-row { display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 6px 16px; }
+  .instructions-text p { margin-bottom: 4px; }
+  .date-row { display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 5px 12px; }
   .date-row .section-label { margin-bottom: 0; }
   .date-value { font-family: 'Courier New', monospace; font-size: ${layout.fontSize + 1}px; font-weight: bold; }
-  .notes-section { min-height: 70px; }
-  .note-line { border-bottom: 1px solid #ccc; height: 18px; width: 100%; }
-  .bottom-section { display: flex; flex-direction: row; gap: 16px; flex: 1; align-items: stretch; }
+  .notes-section { min-height: 60px; }
+  .note-line { border-bottom: 1px solid #ccc; height: 16px; width: 100%; }
+  .bottom-section { display: flex; flex-direction: row; gap: 12px; flex: 1; align-items: stretch; }
   .share-qr { border: 2px solid #000; padding: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .share-qr canvas { display: block; width: 100%; height: auto; }
+  .share-qr canvas { display: block; }
   .bottom-right { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-  .qr-info-top, .qr-info-bottom { font-size: ${layout.fontSize - 1}px; line-height: 1.5; }
-  .qr-info-top { margin-bottom: 6px; }
-  .qr-info-bottom { margin-bottom: 6px; }
+  .qr-info-top, .qr-info-bottom { font-size: ${layout.fontSize - 1}px; line-height: 1.4; }
+  .qr-info-top { margin-bottom: 4px; }
+  .qr-info-bottom { margin-bottom: 4px; }
   .address-row { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: auto; }
-  .address-qr-box { border: 1px solid #000; padding: 3px; flex-shrink: 0; }
-  .address-info { display: flex; flex-direction: column; gap: 2px; }
+  .address-qr-box { border: 1px solid #000; padding: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .address-qr-box canvas { display: block; width: 100%; height: auto; }
+  .address-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .address-label { font-size: 7px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #666; }
   .address-value { font-family: 'Courier New', monospace; font-size: 8px; word-break: break-all; }
-  .footer { padding: 8px 16px; border-top: 3px solid #000; background: #f5f5f5; }
+  .footer { padding: 6px 12px; border-top: 3px solid #000; background: #f5f5f5; flex-shrink: 0; }
   .footer-warning { font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.5; margin-bottom: 2px; }
   .footer-info { font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #666; margin-bottom: 2px; }
   .footer-guid { font-size: 7px; font-family: 'Courier New', monospace; color: #666; text-align: right; letter-spacing: 0.5px; }

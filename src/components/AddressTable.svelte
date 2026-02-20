@@ -6,21 +6,25 @@
     showPrivateKeys?: boolean;
   } = $props();
 
-  let revealedKeys = $state<Set<number>>(new Set());
+  let viewMode = $state<Record<number, 'address' | 'key'>>({});
 
-  function toggleKey(index: number) {
-    const next = new Set(revealedKeys);
-    if (next.has(index)) next.delete(index);
-    else next.add(index);
-    revealedKeys = next;
+  function getMode(index: number): 'address' | 'key' {
+    return viewMode[index] || 'address';
   }
 
-  function copyToClipboard(text: string) {
+  function toggleMode(index: number) {
+    viewMode = { ...viewMode, [index]: getMode(index) === 'address' ? 'key' : 'address' };
+  }
+
+  function copyWithToast(text: string, event: MouseEvent) {
     navigator.clipboard.writeText(text);
-  }
-
-  function truncate(addr: string): string {
-    return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
+    const toast = document.createElement('div');
+    toast.className = 'copy-toast';
+    toast.textContent = 'COPIED';
+    toast.style.left = `${event.clientX}px`;
+    toast.style.top = `${event.clientY}px`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 1000);
   }
 </script>
 
@@ -28,10 +32,7 @@
   <thead>
     <tr>
       <th>#</th>
-      <th>Address</th>
-      {#if showPrivateKeys}
-        <th>Private Key</th>
-      {/if}
+      <th>{showPrivateKeys ? 'Address / Key' : 'Address'}</th>
       <th></th>
     </tr>
   </thead>
@@ -40,24 +41,31 @@
       <tr>
         <td class="text-muted">{addr.index}</td>
         <td>
-          <span class="addr-mono">{truncate(addr.address)}</span>
+          {#if showPrivateKeys && getMode(addr.index) === 'key'}
+            <span
+              class="addr-mono addr-full clickable"
+              role="button"
+              tabindex="0"
+              onclick={(e) => copyWithToast(addr.privateKey, e)}
+              onkeydown={(e) => { if (e.key === 'Enter') copyWithToast(addr.privateKey, e as unknown as MouseEvent); }}
+            >{addr.privateKey}</span>
+          {:else}
+            <span
+              class="addr-mono addr-full clickable"
+              role="button"
+              tabindex="0"
+              onclick={(e) => copyWithToast(addr.address, e)}
+              onkeydown={(e) => { if (e.key === 'Enter') copyWithToast(addr.address, e as unknown as MouseEvent); }}
+            >{addr.address}</span>
+          {/if}
         </td>
-        {#if showPrivateKeys}
-          <td>
-            {#if revealedKeys.has(addr.index)}
-              <span class="addr-mono text-xs">{truncate(addr.privateKey)}</span>
-            {:else}
-              <span class="text-muted text-xs">HIDDEN</span>
-            {/if}
-          </td>
-        {/if}
         <td class="actions">
-          <button class="btn-icon" onclick={() => copyToClipboard(addr.address)} title="Copy address">
+          <button class="btn-icon" onclick={(e) => copyWithToast(getMode(addr.index) === 'key' ? addr.privateKey : addr.address, e)} title="Copy">
             <i class="fa-thin fa-copy"></i>
           </button>
           {#if showPrivateKeys}
-            <button class="btn-icon" onclick={() => toggleKey(addr.index)} title="Toggle key">
-              <i class="fa-thin {revealedKeys.has(addr.index) ? 'fa-eye-slash' : 'fa-eye'}"></i>
+            <button class="btn-icon" onclick={() => toggleMode(addr.index)} title={getMode(addr.index) === 'key' ? 'Show address' : 'Show private key'}>
+              <i class="fa-thin {getMode(addr.index) === 'key' ? 'fa-wallet' : 'fa-key'}"></i>
             </button>
           {/if}
         </td>
@@ -69,11 +77,22 @@
 <style>
   .addr-mono {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+  }
+  .addr-full {
+    word-break: break-all;
+    display: block;
+  }
+  .clickable {
+    cursor: pointer;
+  }
+  .clickable:hover {
+    color: var(--color-accent);
   }
   .actions {
     display: flex;
     gap: 0.25rem;
+    white-space: nowrap;
   }
   .btn-icon {
     background: none;

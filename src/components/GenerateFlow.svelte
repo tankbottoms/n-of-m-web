@@ -57,6 +57,7 @@
   let customPath = $state("m/44'/60'/0'/0/{index}");
   let addressCount = $state(5);
   let addresses = $state<DerivedAddress[]>([]);
+  let passphrase = $state('');
 
   // Step 5: Shamir
   let threshold = $state(3);
@@ -65,7 +66,6 @@
   // Step 6: Metadata
   let secretName = $state('');
   let pin = $state('');
-  let passphrase = $state('');
   let highlightColor = $state('#A8D8EA');
 
   // Step 7: Preview
@@ -75,6 +75,12 @@
   let saving = $state(false);
 
   const COLORS = ['#A8D8EA', '#FFB7B2', '#FFDAC1', '#B5EAD7', '#C7CEEA', '#E2F0CB', '#F8E6E0', '#D5C4F8'];
+
+  function datetimePlaceholder(): string {
+    const d = new Date();
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+  }
   const WORD_COUNTS: WordCount[] = [12, 15, 18, 21, 24];
 
   function log(text: string, type: LogEntry['type'] = 'info') {
@@ -99,6 +105,7 @@
   function prevStep() {
     const idx = STEPS.findIndex(s => s.key === currentStep);
     if (idx > 0) {
+      completedSteps = completedSteps.filter(s => s !== STEPS[idx - 1].key);
       currentStep = STEPS[idx - 1].key;
     }
   }
@@ -139,7 +146,7 @@
     const secretBuf = Buffer.from(mnemonic);
     const rawShares = split(secretBuf, { shares: totalShares, threshold });
     const id = uuid();
-    const name = secretName || `Secret ${new Date().toLocaleDateString()}`;
+    const name = secretName || datetimePlaceholder();
 
     shares = rawShares.map((raw, i) => ({
       v: 1 as const,
@@ -198,241 +205,305 @@
   }
 </script>
 
-<StepIndicator steps={STEPS} {currentStep} {completedSteps} />
+<div class="generate-flow">
+  <StepIndicator steps={STEPS} {currentStep} {completedSteps} />
 
-{#if currentStep === 'words'}
-  <Panel title="Word Count">
-    <div class="step-content">
-      <div class="toggle-row mb-md">
-        <button class:primary={!importMode} onclick={() => { importMode = false; }}>Generate New</button>
-        <button class:primary={importMode} onclick={() => { importMode = true; }}>Import Existing</button>
-      </div>
-
-      {#if importMode}
-        <textarea
-          bind:value={importText}
-          placeholder="Enter your seed phrase words separated by spaces..."
-          rows={4}
-          style="width: 100%;"
-        ></textarea>
-        <p class="text-xs text-muted mt-sm">Paste your existing mnemonic to split it with Shamir's.</p>
-      {:else}
-        <div class="word-count-buttons">
-          {#each WORD_COUNTS as wc}
-            <button class:primary={wordCount === wc} onclick={() => { wordCount = wc; }}>{wc}</button>
-          {/each}
-        </div>
-        <p class="text-xs text-muted mt-sm">
-          {wordCount} words = {wordCount === 12 ? 128 : wordCount === 15 ? 160 : wordCount === 18 ? 192 : wordCount === 21 ? 224 : 256} bits of entropy.
-          24 words recommended.
-        </p>
-      {/if}
-
-      <div class="step-nav mt-lg">
-        <span></span>
-        <button class="primary" onclick={nextStep}>Next <i class="fa-thin fa-arrow-right"></i></button>
-      </div>
-    </div>
-  </Panel>
-
-{:else if currentStep === 'entropy'}
-  <Panel title="Entropy Source">
-    <div class="step-content">
-      {#if importMode}
-        <p class="text-muted">Importing existing phrase -- entropy collection not needed.</p>
-      {:else}
-        <div class="toggle-row mb-md">
-          <button class:primary={entropyMode === 'system'} onclick={() => { entropyMode = 'system'; }}>System Only</button>
-          <button class:primary={entropyMode === 'combined'} onclick={() => { entropyMode = 'combined'; }}>Mouse + System</button>
-        </div>
-
-        {#if entropyMode === 'combined' || entropyMode === 'motion'}
-          <EntropyCanvas {collector} onComplete={() => { motionDone = true; }} />
-        {:else}
-          <div class="system-entropy-info">
-            <p class="text-sm">Using browser's <code>crypto.getRandomValues()</code> -- cryptographically secure.</p>
+  <div class="step-wrapper">
+    {#if currentStep === 'words'}
+      <Panel title="Word Count">
+        <div class="step-content">
+          <div class="step-instructions">
+            <i class="fa-thin fa-circle-info"></i>
+            Choose how many words for your seed phrase, or import an existing one to split with Shamir's Secret Sharing.
           </div>
-        {/if}
-      {/if}
 
-      <div class="step-nav mt-lg">
-        <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
-        <button
-          class="primary"
-          onclick={generateOrImportMnemonic}
-          disabled={entropyMode === 'combined' && !motionDone && !importMode}
-        >
-          {importMode ? 'Import' : 'Generate'} <i class="fa-thin fa-arrow-right"></i>
-        </button>
-      </div>
-    </div>
-  </Panel>
+          <div class="toggle-row mb-md">
+            <button class:primary={!importMode} onclick={() => { importMode = false; }}>Generate New</button>
+            <button class:primary={importMode} onclick={() => { importMode = true; }}>Import Existing</button>
+          </div>
 
-{:else if currentStep === 'mnemonic'}
-  <Panel title="Seed Phrase">
-    <div class="step-content">
-      <div class="mnemonic-controls mb-md">
-        <button onclick={() => { masked = !masked; }}>
-          <i class="fa-thin {masked ? 'fa-eye' : 'fa-eye-slash'}"></i>
-          {masked ? 'Reveal' : 'Hide'}
-        </button>
-        <button onclick={() => { navigator.clipboard.writeText(mnemonic); }}>
-          <i class="fa-thin fa-copy"></i> Copy
-        </button>
-      </div>
-      <MnemonicGrid words={mnemonicWords} {masked} />
-      <p class="text-xs text-muted mt-md">
-        {wordCount} words. Write these down and store securely -- or continue to split with Shamir's.
-      </p>
+          {#if importMode}
+            <textarea
+              bind:value={importText}
+              placeholder="Enter your seed phrase words separated by spaces..."
+              rows={4}
+              style="width: 100%;"
+            ></textarea>
+            <p class="text-xs text-muted mt-sm">Paste your existing mnemonic to split it with Shamir's.</p>
+          {:else}
+            <div class="word-count-buttons">
+              {#each WORD_COUNTS as wc}
+                <button class:primary={wordCount === wc} onclick={() => { wordCount = wc; }}>{wc}</button>
+              {/each}
+            </div>
+            <p class="text-xs text-muted mt-sm">
+              {wordCount} words = {wordCount === 12 ? 128 : wordCount === 15 ? 160 : wordCount === 18 ? 192 : wordCount === 21 ? 224 : 256} bits of entropy.
+              24 words recommended.
+            </p>
+          {/if}
 
-      <div class="step-nav mt-lg">
-        <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
-        <button class="primary" onclick={nextStep}>Next <i class="fa-thin fa-arrow-right"></i></button>
-      </div>
-    </div>
-  </Panel>
-
-{:else if currentStep === 'derivation'}
-  <Panel title="Derivation Path">
-    <div class="step-content">
-      <PathEditor bind:pathType bind:customPath />
-
-      <div class="address-count-row mt-md">
-        <label class="text-xs text-muted">ADDRESSES TO DERIVE</label>
-        <input type="number" min={1} max={50} bind:value={addressCount} style="width: 80px;" />
-      </div>
-
-      <div class="passphrase-row mt-md">
-        <label class="text-xs text-muted">BIP39 PASSPHRASE (OPTIONAL)</label>
-        <input type="password" bind:value={passphrase} placeholder="Leave blank for standard derivation" style="width: 100%;" />
-      </div>
-
-      <div class="step-nav mt-lg">
-        <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
-        <button class="primary" onclick={deriveAddrs}>Derive <i class="fa-thin fa-arrow-right"></i></button>
-      </div>
-    </div>
-  </Panel>
-
-  {#if addresses.length > 0}
-    <Panel title="Derived Addresses">
-      <AddressTable {addresses} showPrivateKeys />
-    </Panel>
-  {/if}
-
-{:else if currentStep === 'shamir'}
-  <Panel title="Shamir Configuration">
-    <div class="step-content">
-      <div class="shamir-config">
-        <div class="config-row">
-          <label class="text-xs text-muted">TOTAL SHARES (M)</label>
-          <input type="number" min={2} max={255} bind:value={totalShares} style="width: 80px;" />
+          <div class="step-nav mt-lg">
+            <span></span>
+            <button class="primary" onclick={nextStep}>Next <i class="fa-thin fa-arrow-right"></i></button>
+          </div>
         </div>
-        <div class="config-row">
-          <label class="text-xs text-muted">THRESHOLD (N)</label>
-          <input type="number" min={2} max={totalShares} bind:value={threshold} style="width: 80px;" />
-        </div>
-      </div>
-      <p class="text-xs text-muted mt-sm">
-        Any <b>{threshold}</b> of <b>{totalShares}</b> shares can reconstruct the secret.
-        {totalShares - threshold} shares can be lost without losing access.
-      </p>
+      </Panel>
 
-      {#if threshold > totalShares}
-        <p class="text-xs mt-sm" style="color: var(--color-error);">Threshold cannot exceed total shares.</p>
-      {/if}
+    {:else if currentStep === 'entropy'}
+      <Panel title="Entropy Source">
+        <div class="step-content">
+          <div class="step-instructions">
+            <i class="fa-thin fa-circle-info"></i>
+            {#if importMode}
+              Importing an existing phrase -- entropy collection is not needed.
+            {:else}
+              Select how randomness is generated. System CSPRNG is cryptographically secure. Mouse entropy adds an additional source mixed with system randomness.
+            {/if}
+          </div>
 
-      <div class="step-nav mt-lg">
-        <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
-        <button class="primary" onclick={nextStep} disabled={threshold > totalShares || threshold < 2}>
-          Next <i class="fa-thin fa-arrow-right"></i>
-        </button>
-      </div>
-    </div>
-  </Panel>
+          {#if importMode}
+            <p class="text-muted">Importing existing phrase -- entropy collection not needed.</p>
+          {:else}
+            <div class="toggle-row mb-md">
+              <button class:primary={entropyMode === 'system'} onclick={() => { entropyMode = 'system'; }}>System Only</button>
+              <button class:primary={entropyMode === 'combined'} onclick={() => { entropyMode = 'combined'; }}>Mouse + System</button>
+            </div>
 
-{:else if currentStep === 'metadata'}
-  <Panel title="Metadata & Security">
-    <div class="step-content">
-      <div class="config-row mb-md">
-        <label class="text-xs text-muted">SECRET NAME</label>
-        <input type="text" bind:value={secretName} placeholder="My Wallet Backup" style="width: 100%;" />
-      </div>
+            {#if entropyMode === 'combined' || entropyMode === 'motion'}
+              <EntropyCanvas {collector} onComplete={() => { motionDone = true; }} />
+            {:else}
+              <div class="system-entropy-info">
+                <p class="text-sm">Using browser's <code>crypto.getRandomValues()</code> -- cryptographically secure.</p>
+              </div>
+            {/if}
+          {/if}
 
-      <div class="config-row mb-md">
-        <label class="text-xs text-muted">PIN PROTECTION (OPTIONAL, 6 DIGITS)</label>
-        <PinInput bind:value={pin} />
-      </div>
-
-      <div class="config-row mb-md">
-        <label class="text-xs text-muted">CARD HIGHLIGHT COLOR</label>
-        <div class="color-swatches">
-          {#each COLORS as color}
+          <div class="step-nav mt-lg">
+            <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
             <button
-              class="color-swatch"
-              class:selected={highlightColor === color}
-              style="background: {color};"
-              onclick={() => { highlightColor = color; }}
-              aria-label="Color {color}"
-            ></button>
-          {/each}
+              class="primary"
+              onclick={generateOrImportMnemonic}
+              disabled={entropyMode === 'combined' && !motionDone && !importMode}
+            >
+              {importMode ? 'Import' : 'Generate'} <i class="fa-thin fa-arrow-right"></i>
+            </button>
+          </div>
         </div>
-      </div>
+      </Panel>
 
-      <div class="step-nav mt-lg">
-        <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
-        <button class="primary" onclick={generateShares}>Generate Shares <i class="fa-thin fa-arrow-right"></i></button>
-      </div>
-    </div>
-  </Panel>
+    {:else if currentStep === 'mnemonic'}
+      <Panel title="Seed Phrase">
+        <div class="step-content">
+          <div class="step-instructions">
+            <i class="fa-thin fa-circle-info"></i>
+            Your {wordCount}-word seed phrase has been generated. You can reveal it, copy it, or continue to the next step to derive wallet addresses.
+          </div>
 
-{:else if currentStep === 'preview'}
-  <Panel title="Share Cards Preview">
-    <div class="step-content">
-      <div class="preview-actions mb-md">
-        <button class="primary" onclick={handlePrint}>
-          <i class="fa-thin fa-print"></i> Print Cards
-        </button>
-        <button onclick={handleDownload}>
-          <i class="fa-thin fa-download"></i> Download HTML
-        </button>
-        <button onclick={saveToVault} disabled={saving}>
-          <i class="fa-thin fa-vault"></i> {saving ? 'Saving...' : 'Save to Vault'}
-        </button>
-      </div>
+          <div class="mnemonic-controls mb-md">
+            <button onclick={() => { masked = !masked; }}>
+              <i class="fa-thin {masked ? 'fa-eye' : 'fa-eye-slash'}"></i>
+              {masked ? 'Reveal' : 'Hide'}
+            </button>
+            <button onclick={() => { navigator.clipboard.writeText(mnemonic); }}>
+              <i class="fa-thin fa-copy"></i> Copy
+            </button>
+          </div>
+          <MnemonicGrid words={mnemonicWords} {masked} />
 
-      <div class="layout-toggle mb-md">
-        <span class="text-xs text-muted">LAYOUT: </span>
-        <button class:primary={layoutType === 'full-page'} onclick={() => { layoutType = 'full-page'; }}>Full</button>
-        <button class:primary={layoutType === '2-up'} onclick={() => { layoutType = '2-up'; }}>Compact</button>
-        <button class:primary={layoutType === 'wallet-size'} onclick={() => { layoutType = 'wallet-size'; }}>Wallet</button>
-      </div>
-
-      <div class="share-cards-grid">
-        {#each shares as share}
-          <ShareCard {share} {highlightColor} />
-        {/each}
-      </div>
-
-      {#if logEntries.length > 0}
-        <div class="mt-md">
-          <TerminalLog entries={logEntries} />
+          <div class="step-nav mt-lg">
+            <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
+            <button class="primary" onclick={nextStep}>Next <i class="fa-thin fa-arrow-right"></i></button>
+          </div>
         </div>
+      </Panel>
+
+    {:else if currentStep === 'derivation'}
+      <Panel title="Derivation Path">
+        <div class="step-content">
+          <div class="step-instructions">
+            <i class="fa-thin fa-circle-info"></i>
+            Choose a derivation path to generate wallet addresses from your seed phrase. MetaMask is the most common for Ethereum wallets.
+          </div>
+
+          <PathEditor bind:pathType bind:customPath />
+
+          <div class="address-count-row mt-md">
+            <label class="text-xs text-muted">ADDRESSES TO DERIVE</label>
+            <input type="number" min={1} max={50} bind:value={addressCount} style="width: 80px;" />
+          </div>
+
+          <div class="passphrase-row mt-md">
+            <label class="text-xs text-muted">BIP39 PASSPHRASE (OPTIONAL)</label>
+            <input type="password" bind:value={passphrase} placeholder="Leave blank for standard derivation" style="width: 100%;" />
+          </div>
+
+          <div class="step-nav mt-lg">
+            <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
+            <button class="primary" onclick={deriveAddrs}>Derive <i class="fa-thin fa-arrow-right"></i></button>
+          </div>
+        </div>
+      </Panel>
+
+      {#if addresses.length > 0}
+        <Panel title="Derived Addresses">
+          <AddressTable {addresses} showPrivateKeys />
+        </Panel>
       {/if}
 
-      <div class="step-nav mt-lg">
-        <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
-        <button class="primary" onclick={onComplete}>
-          <i class="fa-thin fa-check"></i> Done
-        </button>
-      </div>
-    </div>
-  </Panel>
-{/if}
+    {:else if currentStep === 'shamir'}
+      <Panel title="Shamir Configuration">
+        <div class="step-content">
+          <div class="step-instructions">
+            <i class="fa-thin fa-circle-info"></i>
+            Configure how many total share cards to create (M) and how many are needed to reconstruct the secret (N). For example, 3-of-5 means any 3 cards can recover the full phrase.
+          </div>
+
+          <div class="shamir-config">
+            <div class="config-row">
+              <label class="text-xs text-muted">THRESHOLD (N)</label>
+              <input type="number" min={2} max={totalShares} bind:value={threshold} style="width: 80px;" />
+            </div>
+            <div class="config-row">
+              <label class="text-xs text-muted">TOTAL SHARES (M)</label>
+              <input type="number" min={2} max={255} bind:value={totalShares} style="width: 80px;" />
+            </div>
+          </div>
+          <p class="text-xs text-muted mt-sm">
+            Any <b>{threshold}</b> of <b>{totalShares}</b> shares can reconstruct the secret.
+            {totalShares - threshold} shares can be lost without losing access.
+          </p>
+
+          {#if threshold > totalShares}
+            <p class="text-xs mt-sm" style="color: var(--color-error);">Threshold cannot exceed total shares.</p>
+          {/if}
+
+          <div class="step-nav mt-lg">
+            <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
+            <button class="primary" onclick={nextStep} disabled={threshold > totalShares || threshold < 2}>
+              Next <i class="fa-thin fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </Panel>
+
+    {:else if currentStep === 'metadata'}
+      <Panel title="Metadata & Security">
+        <div class="step-content">
+          <div class="step-instructions">
+            <i class="fa-thin fa-circle-info"></i>
+            Name your secret for identification, optionally set a PIN for extra protection, and choose a highlight color for the printed share cards.
+          </div>
+
+          <div class="config-row mb-md">
+            <label class="text-xs text-muted">SECRET NAME</label>
+            <input type="text" bind:value={secretName} placeholder={datetimePlaceholder()} style="width: 100%;" />
+          </div>
+
+          <div class="config-row mb-md">
+            <label class="text-xs text-muted">PIN PROTECTION (OPTIONAL, 6 DIGITS)</label>
+            <PinInput bind:value={pin} />
+          </div>
+
+          <div class="config-row mb-md">
+            <label class="text-xs text-muted">CARD HIGHLIGHT COLOR</label>
+            <div class="color-swatches">
+              {#each COLORS as color}
+                <button
+                  class="color-swatch"
+                  class:selected={highlightColor === color}
+                  style="background: {color};"
+                  onclick={() => { highlightColor = color; }}
+                  aria-label="Color {color}"
+                ></button>
+              {/each}
+            </div>
+          </div>
+
+          <div class="step-nav mt-lg">
+            <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
+            <button class="primary" onclick={generateShares}>Generate Shares <i class="fa-thin fa-arrow-right"></i></button>
+          </div>
+        </div>
+      </Panel>
+
+    {:else if currentStep === 'preview'}
+      <Panel title="Share Cards Preview">
+        <div class="step-content">
+          <div class="step-instructions">
+            <i class="fa-thin fa-circle-info"></i>
+            Review your {shares.length} share cards below. Print them, download as HTML, or save to your encrypted vault. Each card contains a QR code with its share data.
+          </div>
+
+          <div class="preview-actions mb-md">
+            <button class="primary" onclick={handlePrint}>
+              <i class="fa-thin fa-print"></i> Print Cards
+            </button>
+            <button onclick={handleDownload}>
+              <i class="fa-thin fa-download"></i> Download HTML
+            </button>
+            <button onclick={saveToVault} disabled={saving}>
+              <i class="fa-thin fa-vault"></i> {saving ? 'Saving...' : 'Save to Vault'}
+            </button>
+          </div>
+
+          <div class="layout-toggle mb-md">
+            <span class="text-xs text-muted">LAYOUT: </span>
+            <button class:primary={layoutType === 'full-page'} onclick={() => { layoutType = 'full-page'; }}>Full</button>
+            <button class:primary={layoutType === '2-up'} onclick={() => { layoutType = '2-up'; }}>Compact</button>
+            <button class:primary={layoutType === 'wallet-size'} onclick={() => { layoutType = 'wallet-size'; }}>Wallet</button>
+          </div>
+
+          <div class="share-cards-grid">
+            {#each shares as share}
+              <ShareCard {share} {highlightColor} firstAddress={addresses[0]?.address || ''} />
+            {/each}
+          </div>
+
+          {#if logEntries.length > 0}
+            <div class="mt-md">
+              <TerminalLog entries={logEntries} />
+            </div>
+          {/if}
+
+          <div class="step-nav mt-lg">
+            <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
+            <button class="primary" onclick={onComplete}>
+              <i class="fa-thin fa-check"></i> Done
+            </button>
+          </div>
+        </div>
+      </Panel>
+    {/if}
+  </div>
+</div>
 
 <style>
+  .generate-flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  .step-wrapper {
+    width: 100%;
+    max-width: 700px;
+    margin: 0 auto;
+  }
   .step-content {
     /* content wrapper */
+  }
+  .step-instructions {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-alt);
+    margin-bottom: var(--spacing-md);
+  }
+  .step-instructions i {
+    margin-right: 0.35rem;
+    color: var(--color-accent);
   }
   .step-nav {
     display: flex;

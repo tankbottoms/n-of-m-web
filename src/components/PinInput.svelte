@@ -25,7 +25,6 @@
     placeholder={'*'.repeat(length)}
     class="pin-input"
   />
-  <span class="pin-hint text-xs text-muted">{value.length}/{length} DIGITS</span>
 </div>
 
 <style>
@@ -41,9 +40,5 @@
     padding: 0.75rem;
     max-width: 300px;
   }
-  .pin-hint {
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
+
 </style>

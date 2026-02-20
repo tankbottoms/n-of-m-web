@@ -48,19 +48,48 @@
 }
 
 [data-theme='dark'] {
-  --color-bg: #0a0a0a;
-  --color-bg-secondary: #1a1a1a;
-  --color-bg-alt: #151515;
-  --color-text: #e5e5e5;
-  --color-text-muted: #a0a0a0;
-  --color-border: #2a2a2a;
-  --color-border-light: #2a2a2a;
-  --color-border-dark: #e5e5e5;
-  --color-hover-bg: #252525;
-  --color-link: #5c9fd8;
-  --color-shadow: #ffffff;
-  --color-crypto-bg: #0d0d1a;
-  --color-crypto-text: #00ff88;
+  --color-bg: #002b36;
+  --color-bg-secondary: #073642;
+  --color-bg-alt: #073642;
+  --color-text: #93a1a1;
+  --color-text-muted: #657b83;
+  --color-border: #586e75;
+  --color-border-light: #073642;
+  --color-border-dark: #839496;
+  --color-hover-bg: #073642;
+  --color-link: #268bd2;
+  --color-shadow: #586e75;
+  --color-success: #859900;
+  --color-warning: #b58900;
+  --color-error: #dc322f;
+  --color-info: #2aa198;
+  --color-accent: #6c71c4;
+  --color-crypto-bg: #002b36;
+  --color-crypto-text: #859900;
+}
+
+/* Copy toast animation */
+@keyframes copyToast {
+  0% { opacity: 0; transform: translateY(0); }
+  20% { opacity: 1; transform: translateY(-10px); }
+  80% { opacity: 1; transform: translateY(-20px); }
+  100% { opacity: 0; transform: translateY(-30px); }
+}
+
+.copy-toast {
+  position: fixed;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.5rem;
+  background: var(--color-text);
+  color: var(--color-bg);
+  border: 1px solid var(--color-border-dark);
+  z-index: 9999;
+  animation: copyToast 1s ease forwards;
 }
 
 /* Reset */
