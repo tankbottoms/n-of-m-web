@@ -67,6 +67,7 @@
   let secretName = $state('');
   let pin = $state('');
   let highlightColor = $state('#A8D8EA');
+  let notes = $state('');
 
   // Step 7: Preview
   let shares = $state<SharePayload[]>([]);
@@ -148,6 +149,9 @@
     const id = uuid();
     const name = secretName || datetimePlaceholder();
 
+    const metadata: Record<string, string> = {};
+    if (notes.trim()) metadata.notes = notes.trim();
+
     shares = rawShares.map((raw, i) => ({
       v: 1 as const,
       id,
@@ -159,6 +163,7 @@
       derivationPath: pathType === 'custom' ? customPath : DERIVATION_PATHS[pathType].template,
       pathType,
       wordCount,
+      metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       hasPIN: pin.length > 0,
       hasPassphrase: passphrase.length > 0,
     }));
@@ -172,6 +177,9 @@
     saving = true;
     log('Saving to vault...', 'fetch');
 
+    const vaultMetadata: Record<string, string> = {};
+    if (notes.trim()) vaultMetadata.notes = notes.trim();
+
     const record: SecretRecord = {
       id: shares[0].id,
       name: shares[0].name,
@@ -183,6 +191,7 @@
       addressCount,
       addresses,
       shamirConfig: { threshold, totalShares },
+      metadata: Object.keys(vaultMetadata).length > 0 ? vaultMetadata : undefined,
       hasPassphrase: passphrase.length > 0,
       hasPIN: pin.length > 0,
     };
@@ -402,6 +411,20 @@
           <div class="config-row mb-md">
             <label class="text-xs text-muted">PIN PROTECTION (OPTIONAL, 6 DIGITS)</label>
             <PinInput bind:value={pin} />
+          </div>
+
+          <div class="config-row mb-md">
+            <label class="text-xs text-muted">NOTES (OPTIONAL)</label>
+            <textarea
+              bind:value={notes}
+              placeholder="Ancillary info: wallet label, purpose, instructions..."
+              rows={3}
+              maxlength={2900}
+              style="width: 100%;"
+            ></textarea>
+            {#if notes.length > 0}
+              <p class="text-xs text-muted">{notes.length}/2900 chars -- large notes increase QR code density</p>
+            {/if}
           </div>
 
           <div class="config-row mb-md">
