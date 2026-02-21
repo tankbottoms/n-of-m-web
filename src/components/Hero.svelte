@@ -1,8 +1,6 @@
 <script lang="ts">
-  let { onNavigate, onDebugToggle, debugVisible = false }: {
+  let { onNavigate }: {
     onNavigate: (mode: 'generate' | 'scan' | 'vault' | 'settings') => void;
-    onDebugToggle?: () => void;
-    debugVisible?: boolean;
   } = $props();
 
   let showExplainer = $state(false);
@@ -23,16 +21,9 @@
     <button onclick={() => onNavigate('vault')}>
       <i class="fa-thin fa-vault"></i> Vault
     </button>
-    <div class="settings-group">
-      <button onclick={() => onNavigate('settings')}>
-        <i class="fa-thin fa-gear"></i> Settings
-      </button>
-      {#if onDebugToggle}
-        <button class="debug-badge-btn" class:active={debugVisible} onclick={onDebugToggle} title="Debug Terminal">
-          <i class="fa-thin fa-terminal"></i>
-        </button>
-      {/if}
-    </div>
+    <button onclick={() => onNavigate('settings')}>
+      <i class="fa-thin fa-gear"></i> Settings
+    </button>
   </div>
 
   <div class="hero-info mt-lg">
@@ -67,8 +58,32 @@
       </div>
 
       <div class="explainer-section">
-        <h3 class="explainer-heading">The math</h3>
-        <p>The secret is encoded as coefficients of a random polynomial of degree N-1 over <code>GF(2^8)</code> (the Galois field with 256 elements). Each share is a point on this polynomial. Reconstruction uses Lagrange interpolation -- given N points, the unique polynomial (and thus the secret) is recovered exactly.</p>
+        <h3 class="explainer-heading">The Mathematics</h3>
+        <p>Shamir's scheme operates over a finite field. Each byte of the secret is treated independently in <code>GF(2^8)</code> -- the Galois field with 256 elements, defined by the irreducible polynomial <code>x^8 + x^4 + x^3 + x + 1</code> (0x11B).</p>
+      </div>
+
+      <div class="explainer-section">
+        <h3 class="explainer-heading">Polynomial Construction</h3>
+        <p>For each byte <code>s</code> of the secret, a random polynomial of degree <code>t-1</code> is constructed:</p>
+        <div class="math-block">f(x) = s + a<sub>1</sub>x + a<sub>2</sub>x<sup>2</sup> + ... + a<sub>t-1</sub>x<sup>t-1</sup></div>
+        <p>where <code>s</code> is the secret byte (the constant term), <code>a<sub>1</sub>...a<sub>t-1</sub></code> are cryptographically random coefficients, and <code>t</code> is the threshold. Each share <code>i</code> receives the evaluation <code>f(i)</code> for <code>i = 1, 2, ..., M</code>.</p>
+      </div>
+
+      <div class="explainer-section">
+        <h3 class="explainer-heading">GF(2^8) Arithmetic</h3>
+        <p>Addition in <code>GF(2^8)</code> is XOR. Multiplication uses polynomial multiplication modulo the reducing polynomial, efficiently implemented via log/exp tables. This ensures all operations stay within the 256-element field -- no integer overflow, no rounding.</p>
+      </div>
+
+      <div class="explainer-section">
+        <h3 class="explainer-heading">Lagrange Interpolation</h3>
+        <p>Given any <code>t</code> points <code>(x<sub>i</sub>, y<sub>i</sub>)</code>, the secret is recovered by computing <code>f(0)</code>:</p>
+        <div class="math-block">f(0) = &Sigma;<sub>j</sub> y<sub>j</sub> &middot; &Pi;<sub>k&ne;j</sub> x<sub>k</sub> / (x<sub>k</sub> - x<sub>j</sub>)</div>
+        <p>Division in <code>GF(2^8)</code> uses multiplicative inverses via the exp/log tables. Because the polynomial has degree <code>t-1</code>, exactly <code>t</code> points uniquely determine it -- fewer than <code>t</code> points leave the secret uniformly distributed across all 256 possible values, providing information-theoretic security.</p>
+      </div>
+
+      <div class="explainer-section">
+        <h3 class="explainer-heading">Security Properties</h3>
+        <p>With <code>t-1</code> or fewer shares, an attacker gains <b>zero</b> information about the secret. This is not computational security (like encryption) but <b>information-theoretic</b> -- it holds regardless of computing power. The scheme is also <b>perfect</b>: each share is exactly as long as the secret itself.</p>
       </div>
     </div>
   {/if}
@@ -104,37 +119,6 @@
   .hero-actions button {
     min-width: 120px;
   }
-  .settings-group {
-    display: flex;
-    gap: 0.25rem;
-    align-items: stretch;
-  }
-  .settings-group .debug-badge-btn {
-    min-width: 0;
-    width: 38px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
-    opacity: 0.4;
-    border: 1px solid var(--color-border);
-    box-shadow: 1px 1px 0px var(--color-shadow);
-    background: var(--color-bg);
-    cursor: pointer;
-    font-family: var(--font-mono);
-  }
-  .settings-group .debug-badge-btn.active {
-    opacity: 1;
-    color: var(--color-crypto-text);
-    border-color: var(--color-crypto-text);
-  }
-  .settings-group .debug-badge-btn:hover {
-    opacity: 0.8;
-    box-shadow: 2px 2px 0px var(--color-shadow);
-    transform: translate(-1px, -1px);
-  }
   @media (max-width: 480px) {
     .hero-actions {
       flex-direction: column;
@@ -143,15 +127,6 @@
     .hero-actions button {
       min-width: 0;
       width: 100%;
-    }
-    .settings-group {
-      flex-direction: row;
-    }
-    .settings-group button:first-child {
-      flex: 1;
-    }
-    .settings-group .debug-badge-btn {
-      width: 44px;
     }
   }
   .hero-info {
@@ -211,5 +186,15 @@
     background: var(--color-hover-bg);
     padding: 0.1rem 0.3rem;
     border: 1px solid var(--color-border);
+  }
+  .math-block {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    background: var(--color-hover-bg);
+    border: 1px solid var(--color-border);
+    padding: 0.5rem 0.75rem;
+    margin: 0.4rem 0;
+    text-align: center;
+    letter-spacing: 0.02em;
   }
 </style>

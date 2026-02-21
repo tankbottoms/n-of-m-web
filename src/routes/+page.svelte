@@ -5,12 +5,9 @@
   import ScanFlow from '../components/ScanFlow.svelte';
   import VaultPanel from '../components/VaultPanel.svelte';
   import SettingsPanel from '../components/SettingsPanel.svelte';
-  import DebugTerminal from '../components/DebugTerminal.svelte';
-
   type Mode = 'home' | 'generate' | 'scan' | 'vault' | 'settings';
   let mode = $state<Mode>('home');
   let isActive = $derived(mode !== 'home');
-  let debugVisible = $state(false);
 
   function navigate(m: Mode) {
     mode = m;
@@ -22,7 +19,6 @@
 </script>
 
 <ThemeToggle />
-<DebugTerminal bind:visible={debugVisible} />
 
 <div class="app-wrapper" class:active={isActive}>
   {#if isActive}
@@ -31,15 +27,13 @@
         <i class="fa-thin fa-arrow-left"></i> BACK
       </button>
       <span class="nav-title">{mode.toUpperCase()}</span>
-      <button class="nav-btn debug-badge" class:active={debugVisible} onclick={() => { debugVisible = !debugVisible; }} title="Debug Terminal">
-        <i class="fa-thin fa-terminal"></i>
-      </button>
+      <span></span>
     </div>
   {/if}
 
   <div class="container">
     {#if mode === 'home'}
-      <Hero onNavigate={(m) => navigate(m)} onDebugToggle={() => { debugVisible = !debugVisible; }} {debugVisible} />
+      <Hero onNavigate={(m) => navigate(m)} />
     {:else if mode === 'generate'}
       <GenerateFlow onComplete={goHome} />
     {:else if mode === 'scan'}
@@ -97,13 +91,5 @@
     color: var(--color-text);
     box-shadow: none;
     transform: none;
-  }
-  .debug-badge {
-    font-size: 0.75rem;
-    opacity: 0.5;
-  }
-  .debug-badge.active {
-    opacity: 1;
-    color: var(--color-crypto-text);
   }
 </style>

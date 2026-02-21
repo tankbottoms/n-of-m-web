@@ -202,13 +202,13 @@
   }
 
   function handlePrint() {
-    const html = generatePrintHTML(shares, highlightColor, layoutType, addresses[0]?.address);
+    const html = generatePrintHTML(shares, highlightColor, layoutType, addresses.slice(0, 5));
     printCards(html);
     log('Print dialog opened', 'info');
   }
 
   function handleDownload() {
-    const html = generatePrintHTML(shares, highlightColor, layoutType, addresses[0]?.address);
+    const html = generatePrintHTML(shares, highlightColor, layoutType, addresses.slice(0, 5));
     downloadHTML(html, `shamir-cards-${shares[0]?.name || 'export'}.html`);
     log('Downloaded HTML file', 'found');
   }
@@ -478,7 +478,7 @@
 
           <div class="share-cards-grid">
             {#each shares as share}
-              <ShareCard {share} {highlightColor} firstAddress={addresses[0]?.address || ''} />
+              <ShareCard {share} {highlightColor} addresses={addresses.slice(0, 5)} />
             {/each}
           </div>
 

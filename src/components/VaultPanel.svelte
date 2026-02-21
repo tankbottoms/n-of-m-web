@@ -90,7 +90,7 @@
       hasPassphrase: secret.hasPassphrase,
     }));
 
-    const html = generatePrintHTML(shares, '#A8D8EA', reprintLayout, secret.addresses[0]?.address);
+    const html = generatePrintHTML(shares, '#A8D8EA', reprintLayout, secret.addresses.slice(0, 5));
     printCards(html);
     reprintId = null;
   }

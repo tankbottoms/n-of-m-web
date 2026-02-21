@@ -63,7 +63,12 @@
       hasPassphrase: false,
     }));
 
-    const html = generatePrintHTML(sampleShares, defaultColor, layoutKey, '0x0000000000000000000000000000000000000000');
+    const sampleAddresses = [
+      { index: 0, address: '0x0000000000000000000000000000000000000000', privateKey: '' },
+      { index: 1, address: '0x1111111111111111111111111111111111111111', privateKey: '' },
+      { index: 2, address: '0x2222222222222222222222222222222222222222', privateKey: '' },
+    ];
+    const html = generatePrintHTML(sampleShares, defaultColor, layoutKey, sampleAddresses);
     downloadHTML(html, `example-${layoutKey}.html`);
   }
 

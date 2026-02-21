@@ -1,4 +1,4 @@
-import type { SharePayload } from '../types';
+import type { SharePayload, DerivedAddress } from '../types';
 import { renderPageHTML } from './templates';
 import { LAYOUTS } from './layouts';
 import type { LayoutType } from './layouts';
@@ -10,11 +10,11 @@ export function generatePrintHTML(
   shares: SharePayload[],
   highlightColor: string,
   layoutType: LayoutType = 'full-page',
-  firstAddress?: string
+  addresses: DerivedAddress[] = []
 ): string {
   const layout = LAYOUTS[layoutType];
   const qrDatas = shares.map((s) => JSON.stringify(s));
-  return renderPageHTML(shares, qrDatas, highlightColor, layout, firstAddress);
+  return renderPageHTML(shares, qrDatas, highlightColor, layout, addresses);
 }
 
 export function printCards(html: string): void {

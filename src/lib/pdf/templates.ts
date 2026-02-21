@@ -1,4 +1,4 @@
-import type { SharePayload } from '../types';
+import type { SharePayload, DerivedAddress } from '../types';
 import type { LayoutConfig } from './layouts';
 
 export function renderCardHTML(
@@ -7,7 +7,7 @@ export function renderCardHTML(
   highlightColor: string,
   layout: LayoutConfig,
   cardId: string,
-  firstAddress?: string
+  addresses: DerivedAddress[] = []
 ): string {
   const now = new Date();
   const date = now.toISOString().replace('T', ' ').slice(0, 16);
@@ -15,6 +15,23 @@ export function renderCardHTML(
   const pinInfo = share.hasPIN ? 'PIN: ENABLED' : 'PIN: NONE';
   const ppInfo = share.hasPassphrase ? 'PASSPHRASE: ENABLED' : 'PASSPHRASE: NONE';
   const isCompact = layout.cardsPerPage >= 2;
+  const isWallet = layout.cardsPerPage >= 4;
+
+  const addressesHTML = addresses.length > 0 ? `
+    <div class="addresses-section">
+      <div class="section-label">DERIVATION</div>
+      <span class="derivation-path">${escapeHTML(share.derivationPath)}</span>
+      ${!isWallet ? `
+      <div class="addr-list">
+        ${addresses.map(a => `<div class="addr-item"><span class="addr-idx">${a.index}</span><span class="addr-val">${escapeHTML(a.address)}</span></div>`).join('')}
+      </div>
+      ` : `
+      <div class="addr-list">
+        ${addresses.slice(0, 2).map(a => `<div class="addr-item"><span class="addr-idx">${a.index}</span><span class="addr-val">${escapeHTML(a.address)}</span></div>`).join('')}
+      </div>
+      `}
+    </div>
+  ` : '';
 
   return `
     <div class="card">
@@ -71,17 +88,7 @@ export function renderCardHTML(
             your secret. <b>There are no backups.</b></p>
           </div>
           ` : ''}
-          ${firstAddress ? `
-          <div class="address-row">
-            <div class="address-qr-box">
-              <canvas id="addr-qr-${cardId}" width="${isCompact ? 48 : 80}" height="${isCompact ? 48 : 80}"></canvas>
-            </div>
-            <div class="address-info">
-              <span class="address-label">PRIMARY ADDRESS</span>
-              <span class="address-value">${escapeHTML(firstAddress)}</span>
-            </div>
-          </div>
-          ` : ''}
+          ${addressesHTML}
         </div>
       </div>
       <div class="footer">
@@ -110,7 +117,7 @@ export function renderPageHTML(
   qrDatas: string[],
   highlightColor: string,
   layout: LayoutConfig,
-  firstAddress?: string
+  addresses: import('../types').DerivedAddress[] = []
 ): string {
   let pages: string[];
 
@@ -120,7 +127,7 @@ export function renderPageHTML(
     for (let i = 0; i < shares.length; i += 4) {
       const batch = shares.slice(i, i + 4);
       const cards = batch.map((share, j) =>
-        renderCardHTML(share, qrDatas[i + j], highlightColor, layout, `card-${i + j}`, firstAddress)
+        renderCardHTML(share, qrDatas[i + j], highlightColor, layout, `card-${i + j}`, addresses)
       ).join('\n');
       pages.push(`<div class="page wallet-page">${cards}</div>`);
     }
@@ -128,16 +135,16 @@ export function renderPageHTML(
     // Compact: 2 cards per page
     pages = [];
     for (let i = 0; i < shares.length; i += 2) {
-      const card1 = renderCardHTML(shares[i], qrDatas[i], highlightColor, layout, `card-${i}`, firstAddress);
+      const card1 = renderCardHTML(shares[i], qrDatas[i], highlightColor, layout, `card-${i}`, addresses);
       const card2 = i + 1 < shares.length
-        ? renderCardHTML(shares[i + 1], qrDatas[i + 1], highlightColor, layout, `card-${i + 1}`, firstAddress)
+        ? renderCardHTML(shares[i + 1], qrDatas[i + 1], highlightColor, layout, `card-${i + 1}`, addresses)
         : '';
       pages.push(`<div class="page compact-page">${card1}\n${card2}</div>`);
     }
   } else {
     // Full page: 1 card per page
     pages = shares.map((share, i) => {
-      const card = renderCardHTML(share, qrDatas[i], highlightColor, layout, `card-${i}`, firstAddress);
+      const card = renderCardHTML(share, qrDatas[i], highlightColor, layout, `card-${i}`, addresses);
       return `<div class="page">${card}</div>`;
     });
   }
@@ -154,22 +161,6 @@ export function renderPageHTML(
   `
     )
     .join('\n');
-
-  const addrQrSize = layout.cardsPerPage >= 2 ? 48 : 80;
-  const addrQrScripts = firstAddress
-    ? shares
-        .map(
-          (_, i) => `
-    new QRious({
-      element: document.getElementById('addr-qr-card-${i}'),
-      value: ${JSON.stringify(firstAddress)},
-      size: ${addrQrSize},
-      level: 'L'
-    });
-  `
-        )
-        .join('\n')
-    : '';
 
   return `<!DOCTYPE html>
 <html>
@@ -215,12 +206,14 @@ export function renderPageHTML(
   .qr-info-top, .qr-info-bottom { font-size: ${layout.fontSize - 1}px; line-height: 1.4; }
   .qr-info-top { margin-bottom: 4px; }
   .qr-info-bottom { margin-bottom: 4px; }
-  .address-row { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: auto; }
-  .address-qr-box { border: 1px solid #000; padding: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-  .address-qr-box canvas { display: block; width: 100%; height: auto; }
-  .address-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .address-label { font-size: 7px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #666; }
-  .address-value { font-family: 'Courier New', monospace; font-size: 8px; word-break: break-all; }
+
+  .addresses-section { margin-top: auto; }
+  .derivation-path { font-size: ${layout.fontSize}px; font-weight: bold; margin-bottom: 4px; display: block; }
+  .addr-list { display: flex; flex-direction: column; gap: 1px; }
+  .addr-item { display: flex; gap: 4px; font-size: ${Math.max(layout.fontSize - 2, 6)}px; line-height: 1.3; }
+  .addr-idx { color: #666; font-weight: bold; min-width: 12px; text-align: right; flex-shrink: 0; }
+  .addr-val { word-break: break-all; }
+
   .footer { padding: 6px 12px; border-top: 3px solid #000; background: #f5f5f5; flex-shrink: 0; }
   .footer-warning { font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.5; margin-bottom: 2px; }
   .footer-info { font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #666; margin-bottom: 2px; }
@@ -231,7 +224,6 @@ export function renderPageHTML(
 ${pages.join('\n')}
 <script>
 ${qrScripts}
-${addrQrScripts}
 <\/script>
 </body>
 </html>`;

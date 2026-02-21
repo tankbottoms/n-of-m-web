@@ -168,8 +168,8 @@ button:disabled {
 }
 
 button.primary {
-  background: var(--color-text);
-  color: var(--color-bg);
+  background: var(--color-accent);
+  color: #fff;
 }
 
 /* Inputs */

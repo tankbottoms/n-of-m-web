@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { SharePayload } from '$lib/types';
+  import type { SharePayload, DerivedAddress } from '$lib/types';
 
-  let { share, highlightColor = '#A8D8EA', firstAddress = '' }: {
+  let { share, highlightColor = '#A8D8EA', addresses = [] }: {
     share: SharePayload;
     highlightColor?: string;
-    firstAddress?: string;
+    addresses?: DerivedAddress[];
   } = $props();
 
   let pinInfo = $derived(share.hasPIN ? 'PIN: ENABLED' : 'PIN: NONE');
@@ -12,7 +12,6 @@
   let date = $derived(new Date().toISOString().replace('T', ' ').slice(0, 16));
 
   let shareQrSrc = $state('');
-  let addrQrSrc = $state('');
 
   function renderQR(data: string, size: number): string {
     if (!data) return '';
@@ -28,9 +27,6 @@
 
   function generateQRs() {
     shareQrSrc = renderQR(JSON.stringify(share), 400);
-    if (firstAddress) {
-      addrQrSrc = renderQR(firstAddress, 200);
-    }
   }
 
   $effect(() => {
@@ -81,16 +77,18 @@
     <div class="qr-right">
       <p class="qr-help">This QR code contains your encrypted share data.
       Scan it with the recovery app. You need at least <b>{share.threshold} cards</b> total.</p>
-      {#if firstAddress}
-        <div class="address-row">
-          <div class="addr-qr-box">
-            {#if addrQrSrc}
-              <img src={addrQrSrc} alt="Address QR Code" />
-            {/if}
-          </div>
-          <div class="addr-info">
-            <span class="addr-label">PRIMARY ADDRESS</span>
-            <span class="addr-value">{firstAddress}</span>
+      {#if addresses.length > 0}
+        <div class="addresses-section">
+          <span class="section-label">DERIVATION PATH</span>
+          <span class="derivation-path">{share.derivationPath}</span>
+          <span class="section-label addr-label-top">ADDRESSES</span>
+          <div class="addr-list">
+            {#each addresses as addr}
+              <div class="addr-item">
+                <span class="addr-index">{addr.index}</span>
+                <span class="addr-value">{addr.address}</span>
+              </div>
+            {/each}
           </div>
         </div>
       {/if}
@@ -159,7 +157,7 @@
   .card-qr-section {
     display: flex;
     gap: 0.75rem;
-    align-items: stretch;
+    align-items: flex-start;
   }
   .share-qr-box {
     border: 2px solid var(--color-border-dark);
@@ -167,88 +165,75 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 180px;
-    height: 180px;
     overflow: hidden;
+  }
+  .share-qr-box img {
+    display: block;
+    width: 140px;
+    height: 140px;
+    image-rendering: pixelated;
   }
   @media (max-width: 480px) {
     .card-qr-section {
       flex-direction: column;
       align-items: center;
     }
-    .share-qr-box {
-      width: 160px;
-      height: 160px;
+    .share-qr-box img {
+      width: 120px;
+      height: 120px;
     }
     .qr-right {
       text-align: center;
     }
-    .address-row {
-      justify-content: center;
-    }
-    .addr-qr-box {
-      width: 70px;
-      height: 70px;
-    }
-  }
-  .share-qr-box img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: fill;
-    image-rendering: pixelated;
   }
   .qr-right {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
     gap: 0.5rem;
+    min-width: 0;
   }
   .qr-help {
     font-size: 0.65rem;
     line-height: 1.5;
     color: var(--color-text-muted);
   }
-  .address-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: auto;
-  }
-  .addr-qr-box {
-    border: 1px solid var(--color-border-dark);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    width: 90px;
-    height: 90px;
-    overflow: hidden;
-  }
-  .addr-qr-box img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: fill;
-    image-rendering: pixelated;
-  }
-  .addr-info {
+
+  .addresses-section {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    min-width: 0;
+    gap: 0.15rem;
   }
-  .addr-label {
-    font-size: 0.5rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+  .derivation-path {
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .addr-label-top {
+    margin-top: 0.25rem;
+  }
+  .addr-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .addr-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    font-size: 0.55rem;
+    line-height: 1.4;
+  }
+  .addr-index {
     color: var(--color-text-muted);
+    font-weight: 600;
+    min-width: 1.2em;
+    text-align: right;
+    flex-shrink: 0;
   }
   .addr-value {
-    font-size: 0.6rem;
     word-break: break-all;
+    color: var(--color-text);
   }
 
   .card-footer {
