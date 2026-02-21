@@ -18,7 +18,7 @@ export const LAYOUTS: Record<LayoutType, LayoutConfig> = {
     cardsPerPage: 1,
     cardWidth: '100%',
     cardHeight: '100%',
-    qrSize: 420,
+    qrSize: 210,
     orientation: 'portrait',
     fontSize: 11,
   },
