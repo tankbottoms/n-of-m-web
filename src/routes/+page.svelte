@@ -5,6 +5,7 @@
   import ScanFlow from '../components/ScanFlow.svelte';
   import VaultPanel from '../components/VaultPanel.svelte';
   import SettingsPanel from '../components/SettingsPanel.svelte';
+  import { VERSION } from '$lib/version';
   type Mode = 'home' | 'generate' | 'scan' | 'vault' | 'settings';
   let mode = $state<Mode>('home');
   let isActive = $derived(mode !== 'home');
@@ -44,6 +45,10 @@
       <SettingsPanel />
     {/if}
   </div>
+
+  <footer class="app-footer">
+    <span class="footer-version">v{VERSION}</span>
+  </footer>
 </div>
 
 <style>
@@ -91,5 +96,16 @@
     color: var(--color-text);
     box-shadow: none;
     transform: none;
+  }
+  .app-footer {
+    text-align: center;
+    padding: var(--spacing-lg) 0;
+    margin-top: var(--spacing-xl);
+  }
+  .footer-version {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    letter-spacing: 0.1em;
   }
 </style>

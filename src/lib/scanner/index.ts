@@ -1,2 +1,2 @@
-export { QRScanner, scanFromFile } from './qr';
-export type { ScannerConfig } from './qr';
+export { QRScanner, scanFromFile, scanFromPDF } from './qr';
+export type { ScannerConfig, ScanStatus } from './qr';

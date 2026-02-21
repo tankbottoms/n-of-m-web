@@ -30,7 +30,7 @@
 
 <table class="data-table addr-table">
   <colgroup>
-    <col style="width: 2.5rem;" />
+    <col style="width: 9em;" />
     <col />
     <col style="width: 4.5rem;" />
   </colgroup>
@@ -44,7 +44,7 @@
   <tbody>
     {#each addresses as addr}
       <tr>
-        <td><span class="idx-badge">{addr.index}</span></td>
+        <td><span class="idx-badge">{String(addr.index).padStart(3, '0')}</span></td>
         <td>
           {#if showPrivateKeys && getMode(addr.index) === 'key'}
             <span

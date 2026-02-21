@@ -1,9 +1,13 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { Buffer } from 'buffer';
-  import type { SharePayload } from '$lib/types';
+  import type { SharePayload, SecretRecord, WordCount } from '$lib/types';
   import { combine } from '$lib/shamir';
-  import { QRScanner, scanFromFile } from '$lib/scanner';
-  import { verifyPIN } from '$lib/storage';
+  import { QRScanner, scanFromFile, scanFromPDF } from '$lib/scanner';
+  import type { ScanStatus } from '$lib/scanner';
+  import { verifyPIN, saveSecret } from '$lib/storage';
+  import { deriveAddresses } from '$lib/wallet';
+  import { playConfirmBeep } from '$lib/audio';
   import Panel from './Panel.svelte';
   import MnemonicGrid from './MnemonicGrid.svelte';
   import PinInput from './PinInput.svelte';
@@ -20,11 +24,45 @@
   let recoveredWords = $derived(recoveredMnemonic ? recoveredMnemonic.split(' ') : []);
   let masked = $state(true);
   let pin = $state('');
+  let vaultSaved = $state(false);
   let scanner: QRScanner | null = null;
+  // svelte-ignore non_reactive_update
   let videoEl: HTMLVideoElement;
-  let canvasEl: HTMLCanvasElement;
+  // svelte-ignore non_reactive_update
   let fileInput: HTMLInputElement;
   let cameraActive = $state(false);
+
+  // Scan overlay state
+  let scanStatus = $state<ScanStatus>('idle');
+  let scanStartTime = $state(0);
+  let guidanceTick = $state(0);
+  let guidanceInterval: ReturnType<typeof setInterval> | null = null;
+
+  let guidanceText = $derived.by(() => {
+    // Reference guidanceTick to trigger re-evaluation
+    void guidanceTick;
+    if (scanStatus === 'detected') return null;
+    if (scanStatus !== 'scanning') return null;
+    const elapsed = Date.now() - scanStartTime;
+    if (elapsed > 10000) return 'Ensure QR code is well-lit and flat';
+    if (elapsed > 5000) return 'Try moving closer or adjusting angle';
+    return 'Align QR code within frame';
+  });
+
+  function startGuidanceTimer() {
+    scanStartTime = Date.now();
+    guidanceTick = 0;
+    guidanceInterval = setInterval(() => {
+      guidanceTick++;
+    }, 1000);
+  }
+
+  function stopGuidanceTimer() {
+    if (guidanceInterval) {
+      clearInterval(guidanceInterval);
+      guidanceInterval = null;
+    }
+  }
 
   function handleScan(data: string): boolean {
     try {
@@ -50,10 +88,12 @@
 
       scannedShares = [...scannedShares, payload];
       error = null;
+      playConfirmBeep();
 
       if (scannedShares.length >= targetThreshold) {
         scanner?.stop();
         cameraActive = false;
+        stopGuidanceTimer();
 
         if (payload.hasPIN) {
           state = 'pin_required';
@@ -68,16 +108,52 @@
     }
   }
 
-  function reconstruct() {
+  async function reconstruct() {
     state = 'reconstructing';
     try {
       const rawShares = scannedShares.map(s => s.shareData);
       const recovered = combine(rawShares);
-      recoveredMnemonic = recovered.toString();
+      recoveredMnemonic = recovered.toString('utf-8');
       state = 'done';
+      await autoSaveToVault();
     } catch (e) {
       error = 'Failed to reconstruct secret. Shares may be incompatible.';
       state = 'error';
+    }
+  }
+
+  async function autoSaveToVault() {
+    try {
+      const share = scannedShares[0];
+      const wordCount = recoveredMnemonic.split(' ').length as WordCount;
+      const addressCount = 10;
+      const addresses = deriveAddresses(
+        recoveredMnemonic,
+        share.pathType,
+        addressCount,
+        share.pathType === 'custom' ? share.derivationPath : undefined
+      );
+
+      const record: SecretRecord = {
+        id: share.id,
+        name: share.name || `Recovered ${new Date().toISOString().slice(0, 10)}`,
+        createdAt: Date.now(),
+        mnemonic: recoveredMnemonic,
+        wordCount,
+        derivationPath: share.derivationPath,
+        pathType: share.pathType,
+        addressCount,
+        addresses,
+        shamirConfig: { threshold: share.threshold, totalShares: share.totalShares },
+        metadata: share.metadata,
+        hasPassphrase: share.hasPassphrase,
+        hasPIN: share.hasPIN,
+      };
+
+      await saveSecret(record);
+      vaultSaved = true;
+    } catch {
+      // Silent failure -- user can still copy the mnemonic
     }
   }
 
@@ -95,14 +171,23 @@
     scanner = new QRScanner({
       onScan: handleScan,
       onError: (msg) => { error = msg; },
+      onStatusChange: (status) => {
+        scanStatus = status;
+        if (status === 'scanning') {
+          scanStartTime = Date.now();
+        }
+      },
     });
-    await scanner.start(videoEl, canvasEl);
+    await scanner.start(videoEl);
     cameraActive = true;
+    startGuidanceTimer();
   }
 
   function stopCamera() {
     scanner?.stop();
     cameraActive = false;
+    scanStatus = 'idle';
+    stopGuidanceTimer();
   }
 
   async function handleFileUpload(e: Event) {
@@ -110,11 +195,26 @@
     const file = input.files?.[0];
     if (!file) return;
 
-    const data = await scanFromFile(file);
-    if (data) {
-      handleScan(data);
+    if (file.type === 'application/pdf') {
+      try {
+        const results = await scanFromPDF(file);
+        if (results.length === 0) {
+          error = 'No QR codes found in PDF';
+        } else {
+          for (const data of results) {
+            handleScan(data);
+          }
+        }
+      } catch {
+        error = 'Failed to read PDF -- try uploading individual page screenshots';
+      }
     } else {
-      error = 'No QR code found in image';
+      const data = await scanFromFile(file);
+      if (data) {
+        handleScan(data);
+      } else {
+        error = 'No QR code found in image -- try a higher resolution screenshot';
+      }
     }
     input.value = '';
   }
@@ -128,8 +228,14 @@
     recoveredMnemonic = '';
     pin = '';
     state = 'scanning';
+    scanStatus = 'idle';
     stopCamera();
   }
+
+  onDestroy(() => {
+    scanner?.stop();
+    stopGuidanceTimer();
+  });
 </script>
 
 {#if state === 'scanning'}
@@ -180,7 +286,26 @@
 
       <div class="camera-area">
         <video bind:this={videoEl} class="camera-video" class:hidden={!cameraActive} playsinline></video>
-        <canvas bind:this={canvasEl} class="camera-canvas"></canvas>
+
+        {#if cameraActive}
+          <div class="scan-overlay" class:detected={scanStatus === 'detected'}>
+            <div class="reticle">
+              <div class="corner corner-tl"></div>
+              <div class="corner corner-tr"></div>
+              <div class="corner corner-bl"></div>
+              <div class="corner corner-br"></div>
+            </div>
+            {#if scanStatus === 'detected'}
+              <div class="guidance-pill guidance-success">
+                <i class="fa-thin fa-check"></i> Found!
+              </div>
+            {:else if guidanceText}
+              <div class="guidance-pill">
+                {guidanceText}
+              </div>
+            {/if}
+          </div>
+        {/if}
 
         {#if !cameraActive}
           <div class="camera-placeholder">
@@ -197,9 +322,9 @@
           <button class="primary" onclick={startCamera}><i class="fa-thin fa-camera"></i> Start Camera</button>
         {/if}
         <button onclick={() => fileInput.click()}>
-          <i class="fa-thin fa-upload"></i> Upload Image
+          <i class="fa-thin fa-upload"></i> Upload Image/PDF
         </button>
-        <input bind:this={fileInput} type="file" accept="image/*" onchange={handleFileUpload} style="display: none;" />
+        <input bind:this={fileInput} type="file" accept="image/*,application/pdf" onchange={handleFileUpload} style="display: none;" />
       </div>
 
       {#if error}
@@ -238,6 +363,9 @@
       </div>
       <MnemonicGrid words={recoveredWords} {masked} />
       <p class="text-xs text-muted mt-md">{recoveredWords.length} words recovered from {scannedShares.length} shares.</p>
+      {#if vaultSaved}
+        <p class="vault-saved-notice mt-sm"><i class="fa-thin fa-vault"></i> Saved to vault</p>
+      {/if}
       <div class="step-nav mt-lg">
         <button onclick={reset}><i class="fa-thin fa-rotate"></i> Scan Another</button>
         <button class="primary" onclick={onComplete}><i class="fa-thin fa-check"></i> Done</button>
@@ -253,9 +381,6 @@
 {/if}
 
 <style>
-  .scan-content, .pin-content, .recovered-content {
-    /* content wrapper */
-  }
   .step-instructions {
     font-size: 0.8rem;
     line-height: 1.5;
@@ -292,9 +417,6 @@
   .camera-video.hidden {
     display: none;
   }
-  .camera-canvas {
-    display: none;
-  }
   .camera-placeholder {
     position: absolute;
     inset: 0;
@@ -303,6 +425,76 @@
     align-items: center;
     justify-content: center;
   }
+
+  /* Scan overlay */
+  .scan-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .reticle {
+    position: relative;
+    width: 65%;
+    max-width: 280px;
+    aspect-ratio: 1;
+  }
+
+  .corner {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-color: rgba(255, 255, 255, 0.9);
+    border-style: solid;
+    border-width: 0;
+    transition: border-color 0.2s;
+  }
+  .scan-overlay.detected .corner {
+    border-color: #4caf50;
+  }
+  .corner-tl {
+    top: 0; left: 0;
+    border-top-width: 3px;
+    border-left-width: 3px;
+  }
+  .corner-tr {
+    top: 0; right: 0;
+    border-top-width: 3px;
+    border-right-width: 3px;
+  }
+  .corner-bl {
+    bottom: 0; left: 0;
+    border-bottom-width: 3px;
+    border-left-width: 3px;
+  }
+  .corner-br {
+    bottom: 0; right: 0;
+    border-bottom-width: 3px;
+    border-right-width: 3px;
+  }
+
+  .guidance-pill {
+    margin-top: 12px;
+    padding: 4px 12px;
+    background: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    letter-spacing: 0.5px;
+  }
+  .guidance-success {
+    background: rgba(76, 175, 80, 0.85);
+    color: #fff;
+    font-weight: 600;
+  }
+  .guidance-success i {
+    margin-right: 0.25rem;
+  }
+
   .shard-progress {
     border: 1px solid var(--color-border);
     padding: var(--spacing-sm) var(--spacing-md);
@@ -367,5 +559,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+  }
+  .vault-saved-notice {
+    font-size: 0.75rem;
+    color: var(--color-success);
+    font-weight: 600;
+  }
+  .vault-saved-notice i {
+    margin-right: 0.25rem;
   }
 </style>

@@ -9,8 +9,8 @@
   import { deriveAddresses } from '$lib/wallet';
   import { DERIVATION_PATHS, getDerivationPath } from '$lib/derivation';
   import { split } from '$lib/shamir';
-  import { saveSecret } from '$lib/storage';
-  import { generatePrintHTML, printCards, downloadHTML } from '$lib/pdf';
+  import { saveSecret, getAllSecrets } from '$lib/storage';
+  import { generatePrintHTML, printCards, downloadHTML, datetimeStamp } from '$lib/pdf';
   import type { LayoutType } from '$lib/pdf';
   import StepIndicator from './StepIndicator.svelte';
   import Panel from './Panel.svelte';
@@ -55,7 +55,7 @@
   // Step 4: Derivation
   let pathType = $state<PathType>('metamask');
   let customPath = $state("m/44'/60'/0'/0/{index}");
-  let addressCount = $state(5);
+  let addressCount = $state(10);
   let addresses = $state<DerivedAddress[]>([]);
   let passphrase = $state('');
 
@@ -74,14 +74,19 @@
   let layoutType = $state<LayoutType>('full-page');
   let logEntries = $state<LogEntry[]>([]);
   let saving = $state(false);
+  let vaultSaved = $state<{ name: string; datetime: string; index: number } | null>(null);
+  let ghostActive = $state(false);
+
+  // Confirmation popups
+  let showPassphraseConfirm = $state(false);
+  let showPinConfirm = $state(false);
+  let pinConfirmValue = $state('');
+  let pinConfirmError = $state('');
+  let passphraseVisible = $state(false);
+  let confirmPassphraseVisible = $state(false);
 
   const COLORS = ['#A8D8EA', '#FFB7B2', '#FFDAC1', '#B5EAD7', '#C7CEEA', '#E2F0CB', '#F8E6E0', '#D5C4F8'];
 
-  function datetimePlaceholder(): string {
-    const d = new Date();
-    const p = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
-  }
   const WORD_COUNTS: WordCount[] = [12, 15, 18, 21, 24];
 
   function log(text: string, type: LogEntry['type'] = 'info') {
@@ -147,7 +152,17 @@
     nextStep();
   }
 
+  function handleDeriveClick() {
+    if (passphrase.trim()) {
+      showPassphraseConfirm = true;
+      confirmPassphraseVisible = false;
+    } else {
+      deriveAddrs();
+    }
+  }
+
   function deriveAddrs() {
+    showPassphraseConfirm = false;
     const path = pathType === 'custom' ? customPath : DERIVATION_PATHS[pathType].template;
     log(`Deriving ${addressCount} addresses via ${formatPathLabel(pathType)}...`, 'fetch');
     log(`Path template: ${path}`, 'info');
@@ -164,6 +179,26 @@
     return 'Custom';
   }
 
+  function handleGenerateSharesClick() {
+    if (pin.length > 0) {
+      showPinConfirm = true;
+      pinConfirmValue = '';
+      pinConfirmError = '';
+    } else {
+      generateShares();
+    }
+  }
+
+  function confirmPin() {
+    if (pinConfirmValue !== pin) {
+      pinConfirmError = 'PIN does not match. Try again.';
+      pinConfirmValue = '';
+      return;
+    }
+    showPinConfirm = false;
+    generateShares();
+  }
+
   function generateShares() {
     log(`Splitting secret into ${totalShares} shares (threshold: ${threshold})...`, 'fetch');
     const secretBuf = Buffer.from(mnemonic);
@@ -171,7 +206,7 @@
     const rawShares = split(secretBuf, { shares: totalShares, threshold });
     log(`Shamir split complete: ${rawShares.length} shares × ${rawShares[0]?.length || 0} bytes each`, 'info');
     const id = uuid();
-    const name = secretName || datetimePlaceholder();
+    const name = secretName || datetimeStamp();
 
     const metadata: Record<string, string> = {};
     if (notes.trim()) metadata.notes = notes.trim();
@@ -221,19 +256,27 @@
     };
 
     await saveSecret(record);
+    const allSecrets = await getAllSecrets();
+    const vaultIndex = allSecrets.findIndex(s => s.id === record.id) + 1;
+    const dt = new Date();
+    const dtStr = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    ghostActive = true;
+    setTimeout(() => { ghostActive = false; }, 800);
+    vaultSaved = { name: record.name, datetime: dtStr, index: vaultIndex };
+    setTimeout(() => { vaultSaved = null; }, 4000);
     log('Saved to vault', 'found');
     saving = false;
   }
 
   function handlePrint() {
-    const html = generatePrintHTML(shares, highlightColor, layoutType, addresses.slice(0, 5));
+    const html = generatePrintHTML(shares, highlightColor, layoutType, addresses, true);
     printCards(html);
     log('Print dialog opened', 'info');
   }
 
   function handleDownload() {
-    const html = generatePrintHTML(shares, highlightColor, layoutType, addresses.slice(0, 5));
-    downloadHTML(html, `shamir-cards-${shares[0]?.name || 'export'}.html`);
+    const html = generatePrintHTML(shares, highlightColor, layoutType, addresses, false);
+    downloadHTML(html, `shamir-cards-${shares[0]?.name || 'export'}-${datetimeStamp()}.html`);
     log('Downloaded HTML file', 'found');
   }
 </script>
@@ -361,18 +404,45 @@
           <PathEditor bind:pathType bind:customPath />
 
           <div class="address-count-row mt-md">
-            <label class="text-xs text-muted">ADDRESSES TO DERIVE</label>
-            <input type="number" min={1} max={50} bind:value={addressCount} style="width: 80px;" />
+            <label for="address-count" class="text-xs text-muted">ADDRESSES TO DERIVE</label>
+            <input id="address-count" type="number" min={1} max={50} bind:value={addressCount} style="width: 80px;" />
           </div>
 
           <div class="passphrase-row mt-md">
-            <label class="text-xs text-muted">BIP39 PASSPHRASE (OPTIONAL)</label>
-            <input type="password" bind:value={passphrase} placeholder="Leave blank for standard derivation" style="width: 100%;" />
+            <label for="passphrase" class="text-xs text-muted">BIP39 PASSPHRASE (OPTIONAL)</label>
+            <div class="input-with-toggle">
+              <input id="passphrase" type={passphraseVisible ? 'text' : 'password'} bind:value={passphrase} placeholder="Leave blank for standard derivation" style="width: 100%;" />
+              <button class="input-toggle-btn" onclick={() => { passphraseVisible = !passphraseVisible; }} title={passphraseVisible ? 'Hide passphrase' : 'Show passphrase'} type="button">
+                <i class="fa-thin {passphraseVisible ? 'fa-eye-slash' : 'fa-eye'}"></i>
+              </button>
+            </div>
           </div>
+
+          {#if showPassphraseConfirm}
+            <button class="popup-overlay" onclick={() => { showPassphraseConfirm = false; }} aria-label="Close"></button>
+            <div class="confirm-popup">
+              <h4 class="text-xs text-muted mb-sm">CONFIRM BIP39 PASSPHRASE</h4>
+              <p class="text-xs mb-sm" style="color: var(--color-warning);">
+                Recovery of this seed phrase will be <b>impossible</b> without this exact passphrase. Document it securely.
+              </p>
+              <div class="confirm-passphrase-display">
+                <span class="confirm-value">{confirmPassphraseVisible ? passphrase : '*'.repeat(passphrase.length)}</span>
+                <button class="input-toggle-btn" onclick={() => { confirmPassphraseVisible = !confirmPassphraseVisible; }} type="button">
+                  <i class="fa-thin {confirmPassphraseVisible ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                </button>
+              </div>
+              <div class="popup-actions mt-md">
+                <button onclick={() => { showPassphraseConfirm = false; }}>Cancel</button>
+                <button class="primary" onclick={deriveAddrs}>
+                  <i class="fa-thin fa-check"></i> Confirm &amp; Derive
+                </button>
+              </div>
+            </div>
+          {/if}
 
           <div class="step-nav mt-lg">
             <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
-            <button class="primary" onclick={deriveAddrs}>Derive <i class="fa-thin fa-arrow-right"></i></button>
+            <button class="primary" onclick={handleDeriveClick}>Derive <i class="fa-thin fa-arrow-right"></i></button>
           </div>
         </div>
       </Panel>
@@ -393,12 +463,12 @@
 
           <div class="shamir-config">
             <div class="config-row">
-              <label class="text-xs text-muted">THRESHOLD (N)</label>
-              <input type="number" min={2} max={totalShares} bind:value={threshold} style="width: 80px;" />
+              <label for="threshold" class="text-xs text-muted">THRESHOLD (N)</label>
+              <input id="threshold" type="number" min={2} max={totalShares} bind:value={threshold} style="width: 80px;" />
             </div>
             <div class="config-row">
-              <label class="text-xs text-muted">TOTAL SHARES (M)</label>
-              <input type="number" min={2} max={255} bind:value={totalShares} style="width: 80px;" />
+              <label for="total-shares" class="text-xs text-muted">TOTAL SHARES (M)</label>
+              <input id="total-shares" type="number" min={2} max={255} bind:value={totalShares} style="width: 80px;" />
             </div>
           </div>
           <p class="text-xs text-muted mt-sm">
@@ -428,18 +498,21 @@
           </div>
 
           <div class="config-row mb-md">
-            <label class="text-xs text-muted">SECRET NAME</label>
-            <input type="text" bind:value={secretName} placeholder={datetimePlaceholder()} style="width: 100%;" />
+            <label for="secret-name" class="text-xs text-muted">SECRET NAME</label>
+            <input id="secret-name" type="text" bind:value={secretName} placeholder={datetimeStamp()} style="width: 100%;" />
           </div>
 
           <div class="config-row mb-md">
-            <label class="text-xs text-muted">PIN PROTECTION (OPTIONAL, 6 DIGITS)</label>
-            <PinInput bind:value={pin} />
+            <span class="text-xs text-muted" id="pin-label">PIN PROTECTION (OPTIONAL, 6 DIGITS)</span>
+            <div aria-labelledby="pin-label">
+              <PinInput bind:value={pin} />
+            </div>
           </div>
 
           <div class="config-row mb-md">
-            <label class="text-xs text-muted">NOTES (OPTIONAL)</label>
+            <label for="notes" class="text-xs text-muted">NOTES (OPTIONAL)</label>
             <textarea
+              id="notes"
               bind:value={notes}
               placeholder="Ancillary info: wallet label, purpose, instructions..."
               rows={3}
@@ -452,8 +525,8 @@
           </div>
 
           <div class="config-row mb-md">
-            <label class="text-xs text-muted">CARD HIGHLIGHT COLOR</label>
-            <div class="color-swatches">
+            <span class="text-xs text-muted" id="color-label">CARD HIGHLIGHT COLOR</span>
+            <div class="color-swatches" role="radiogroup" aria-labelledby="color-label">
               {#each COLORS as color}
                 <button
                   class="color-swatch"
@@ -466,9 +539,29 @@
             </div>
           </div>
 
+          {#if showPinConfirm}
+            <button class="popup-overlay" onclick={() => { showPinConfirm = false; }} aria-label="Close"></button>
+            <div class="confirm-popup">
+              <h4 class="text-xs text-muted mb-sm">CONFIRM PIN</h4>
+              <p class="text-xs mb-sm" style="color: var(--color-warning);">
+                Re-enter your 6-digit PIN to confirm. You will need this PIN to recover shares.
+              </p>
+              <PinInput bind:value={pinConfirmValue} onComplete={confirmPin} />
+              {#if pinConfirmError}
+                <p class="text-xs mt-sm" style="color: var(--color-error);">{pinConfirmError}</p>
+              {/if}
+              <div class="popup-actions mt-md">
+                <button onclick={() => { showPinConfirm = false; }}>Cancel</button>
+                <button class="primary" onclick={confirmPin} disabled={pinConfirmValue.length < 6}>
+                  <i class="fa-thin fa-check"></i> Confirm
+                </button>
+              </div>
+            </div>
+          {/if}
+
           <div class="step-nav mt-lg">
             <button onclick={prevStep}><i class="fa-thin fa-arrow-left"></i> Back</button>
-            <button class="primary" onclick={generateShares}>Generate Shares <i class="fa-thin fa-arrow-right"></i></button>
+            <button class="primary" onclick={handleGenerateSharesClick}>Generate Shares <i class="fa-thin fa-arrow-right"></i></button>
           </div>
         </div>
       </Panel>
@@ -488,10 +581,25 @@
             <button onclick={handleDownload}>
               <i class="fa-thin fa-download"></i> Download HTML
             </button>
-            <button onclick={saveToVault} disabled={saving}>
-              <i class="fa-thin fa-vault"></i> {saving ? 'Saving...' : 'Save to Vault'}
-            </button>
+            <div class="vault-btn-wrapper">
+              <button onclick={saveToVault} disabled={saving}>
+                <i class="fa-thin fa-vault"></i> {saving ? 'Saving...' : 'Save to Vault'}
+              </button>
+              {#if ghostActive}
+                <div class="vault-ghost">
+                  <i class="fa-thin fa-ghost"></i>
+                </div>
+              {/if}
+            </div>
           </div>
+
+          {#if vaultSaved}
+            <div class="vault-saved-popup">
+              <i class="fa-thin fa-circle-check"></i>
+              <span><b>{vaultSaved.datetime}</b> — {vaultSaved.name} saved to vault [{vaultSaved.index}]</span>
+              <button class="vault-popup-close" aria-label="Dismiss" onclick={() => { vaultSaved = null; }}><i class="fa-thin fa-xmark"></i></button>
+            </div>
+          {/if}
 
           <div class="layout-toggle mb-md">
             <span class="text-xs text-muted">LAYOUT: </span>
@@ -535,9 +643,6 @@
     width: 100%;
     max-width: 700px;
     margin: 0 auto;
-  }
-  .step-content {
-    /* content wrapper */
   }
   .step-instructions {
     font-size: 0.8rem;
@@ -618,5 +723,146 @@
     padding: var(--spacing-md);
     border: 1px solid var(--color-border);
     background: var(--color-bg-alt);
+  }
+  .input-with-toggle {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-with-toggle input {
+    padding-right: 2.5rem;
+  }
+  .input-toggle-btn {
+    position: absolute;
+    right: 0.4rem;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    text-transform: none;
+    min-height: 0;
+  }
+  .input-toggle-btn:hover {
+    color: var(--color-text);
+    box-shadow: none;
+    transform: none;
+  }
+  .popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 100;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: default;
+    text-transform: none;
+    box-shadow: none;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+  .popup-overlay:hover {
+    box-shadow: none;
+    transform: none;
+  }
+  .confirm-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 101;
+    background: var(--color-bg);
+    border: 2px solid var(--color-border-dark);
+    box-shadow: 6px 6px 0px var(--color-shadow);
+    padding: var(--spacing-lg);
+    min-width: 320px;
+    max-width: 90vw;
+  }
+  .confirm-passphrase-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-alt);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+  .confirm-passphrase-display .input-toggle-btn {
+    position: static;
+  }
+  .confirm-value {
+    flex: 1;
+    word-break: break-all;
+  }
+  .popup-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .vault-btn-wrapper {
+    position: relative;
+    display: inline-flex;
+  }
+  .vault-ghost {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translateX(-50%);
+    font-size: 1.5rem;
+    color: var(--color-accent);
+    pointer-events: none;
+    animation: ghost-rise 0.8s ease-out forwards;
+  }
+  @keyframes ghost-rise {
+    0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-40px); }
+  }
+
+  .vault-saved-popup {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 101;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid var(--color-border-dark);
+    background: var(--color-bg);
+    box-shadow: 4px 4px 0 var(--color-shadow);
+    font-size: 0.75rem;
+    animation: toast-lifecycle 4s ease forwards;
+    pointer-events: auto;
+  }
+  .vault-saved-popup i:first-child {
+    color: #4caf50;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+  .vault-popup-close {
+    margin-left: auto;
+    padding: 0.15rem 0.35rem;
+    min-width: 0;
+    font-size: 0.7rem;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    box-shadow: none;
+  }
+  .vault-popup-close:hover {
+    background: var(--color-bg);
+  }
+  @keyframes toast-lifecycle {
+    0% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+    8% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    75% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
   }
 </style>

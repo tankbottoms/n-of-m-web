@@ -1,0 +1,15 @@
+{
+  "name": "n of m -- Shamir Secret Sharing",
+  "short_name": "n of m",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f0e8",
+  "theme_color": "#f5f0e8",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -14,6 +14,9 @@ export default defineConfig({
   optimizeDeps: {
     include: ['buffer'],
   },
+  ssr: {
+    external: ['buffer'],
+  },
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',

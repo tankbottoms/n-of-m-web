@@ -1,16 +1,19 @@
 <script lang="ts">
-  import type { SecretRecord, PathType } from '$lib/types';
+  import { onMount } from 'svelte';
+  import type { SecretRecord, PathType, ShareSet, SharePayload } from '$lib/types';
   import { getAllSecrets, deleteSecret, updateSecret, hasVaultPassword, verifyVaultPassword, saveSecret } from '$lib/storage';
-  import { generatePrintHTML, printCards, downloadHTML } from '$lib/pdf';
+  import { generatePrintHTML, printCards, downloadHTML, datetimeStamp, ensureQRious } from '$lib/pdf';
   import type { LayoutType } from '$lib/pdf';
   import { split } from '$lib/shamir';
   import { deriveAddresses } from '$lib/wallet';
   import { DERIVATION_PATHS } from '$lib/derivation';
   import { Buffer } from 'buffer';
   import { v4 as uuid } from 'uuid';
+  import { verifyPIN } from '$lib/storage';
   import Panel from './Panel.svelte';
   import MnemonicGrid from './MnemonicGrid.svelte';
   import AddressTable from './AddressTable.svelte';
+  import PinInput from './PinInput.svelte';
 
   let secrets = $state<SecretRecord[]>([]);
   let expandedId = $state<string | null>(null);
@@ -34,6 +37,18 @@
   let duplicateId = $state<string | null>(null);
   let dupPathType = $state<PathType>('metamask');
   let dupCustomPath = $state("m/44'/60'/0'/0/{index}");
+
+  // New shares config (within the shares popup)
+  let newSharesThreshold = $state(2);
+  let newSharesTotal = $state(3);
+
+  // Share set delete confirmation
+  let deleteShareSetId = $state<string | null>(null);
+
+  // PIN verification for seed phrase reveal
+  let pinPromptId = $state<string | null>(null);
+  let pinPromptValue = $state('');
+  let pinPromptError = $state('');
 
   async function loadSecrets() {
     loading = true;
@@ -69,19 +84,15 @@
     reprintLayout = 'full-page';
   }
 
-  function handleReprint(secret: SecretRecord) {
-    const rawShares = split(Buffer.from(secret.mnemonic), {
-      shares: secret.shamirConfig.totalShares,
-      threshold: secret.shamirConfig.threshold,
-    });
-
-    const shares = rawShares.map((raw, i) => ({
+  function buildSharePayloads(secret: SecretRecord, t: number, m: number): SharePayload[] {
+    const rawShares = split(Buffer.from(secret.mnemonic), { shares: m, threshold: t });
+    return rawShares.map((raw, i) => ({
       v: 1 as const,
       id: secret.id,
       name: secret.name,
       shareIndex: i + 1,
-      totalShares: secret.shamirConfig.totalShares,
-      threshold: secret.shamirConfig.threshold,
+      totalShares: m,
+      threshold: t,
       shareData: raw.toString('hex'),
       derivationPath: secret.derivationPath,
       pathType: secret.pathType,
@@ -89,7 +100,11 @@
       hasPIN: secret.hasPIN,
       hasPassphrase: secret.hasPassphrase,
     }));
+  }
 
+  async function handleReprint(secret: SecretRecord) {
+    await ensureQRious();
+    const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
     const html = generatePrintHTML(shares, '#A8D8EA', reprintLayout, secret.addresses.slice(0, 5));
     printCards(html);
     reprintId = null;
@@ -152,6 +167,35 @@
     duplicateId = null;
   }
 
+  async function handleGenerateNewShares(secret: SecretRecord) {
+    if (newSharesThreshold < 2 || newSharesTotal < newSharesThreshold) return;
+
+    await ensureQRious();
+    const shares = buildSharePayloads(secret, newSharesThreshold, newSharesTotal);
+    const html = generatePrintHTML(shares, '#A8D8EA', reprintLayout, secret.addresses.slice(0, 5));
+    printCards(html);
+
+    const newSet: ShareSet = {
+      id: uuid(),
+      createdAt: Date.now(),
+      threshold: newSharesThreshold,
+      totalShares: newSharesTotal,
+    };
+    const existingSets = secret.shareSets || [];
+    const updated = { ...secret, shareSets: [...existingSets, newSet], updatedAt: Date.now() };
+    await updateSecret(secret.id, updated);
+    secrets = secrets.map(s => s.id === secret.id ? updated : s);
+    reprintId = null;
+  }
+
+  async function handleDeleteShareSet(secret: SecretRecord, setId: string) {
+    const existingSets = secret.shareSets || [];
+    const updated = { ...secret, shareSets: existingSets.filter(s => s.id !== setId), updatedAt: Date.now() };
+    await updateSecret(secret.id, updated);
+    secrets = secrets.map(s => s.id === secret.id ? updated : s);
+    deleteShareSetId = null;
+  }
+
   function formatDate(ts: number): string {
     return new Date(ts).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   }
@@ -197,12 +241,12 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-export.json`;
+    a.download = `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-export-${datetimeStamp()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
-  $effect(() => {
+  onMount(() => {
     loadSecrets();
   });
 </script>
@@ -243,12 +287,12 @@
         <div class="vault-item" class:expanded={expandedId === secret.id}>
           <button class="vault-item-header" onclick={() => { const opening = expandedId !== secret.id; expandedId = opening ? secret.id : null; if (opening) markViewed(secret); }}>
             <div class="item-info">
-              <span class="item-name"><span class="position-badge">{String(idx + 1).padStart(3, '0')}</span> {secret.name}</span>
+              <span class="item-name"><span class="badge badge-info">{String(idx + 1).padStart(3, '0')}</span> {secret.name}</span>
               <span class="text-xs text-muted">{formatDateFull(secret.createdAt)}</span>
             </div>
             <div class="item-badges">
               <span class="badge badge-info">{secret.wordCount}W</span>
-              <span class="badge badge-info">{secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares}</span>
+              <span class="badge badge-info"><i class="fa-thin fa-share-nodes"></i> {secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares}</span>
               {#if secret.hasPIN}<span class="badge badge-warning">PIN</span>{/if}
               <i class="fa-thin {expandedId === secret.id ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
             </div>
@@ -289,20 +333,55 @@
                 </button>
               </div>
 
+              <div class="detail-section config-inline">
+                <span class="text-xs">Path: <code>{secret.derivationPath}</code></span>
+                <span class="text-xs">Type: <code>{formatPathType(secret.pathType)}</code></span>
+              </div>
+
               <div class="detail-section">
                 <div class="seed-header">
                   <h3 class="text-xs text-muted">SEED PHRASE</h3>
                   <div class="seed-header-actions">
-                    <button class="reveal-btn" onclick={() => { const next = new Set(revealedIds); if (next.has(secret.id)) next.delete(secret.id); else next.add(secret.id); revealedIds = next; }}>
+                    <button class="badge badge-info badge-btn" onclick={() => {
+                      if (!revealedIds.has(secret.id) && secret.hasPIN) {
+                        pinPromptId = secret.id;
+                        pinPromptValue = '';
+                        pinPromptError = '';
+                      } else {
+                        const next = new Set(revealedIds);
+                        if (next.has(secret.id)) next.delete(secret.id); else next.add(secret.id);
+                        revealedIds = next;
+                      }
+                    }}>
                       <i class="fa-thin {revealedIds.has(secret.id) ? 'fa-eye-slash' : 'fa-eye'}"></i>
                       {revealedIds.has(secret.id) ? 'Hide' : 'Reveal'}
                     </button>
-                    <button class="reveal-btn" onclick={() => openReprintPopup(secret.id)} title="Edit Shamir shares">
+                    <button class="badge badge-info badge-btn" onclick={() => openReprintPopup(secret.id)} title="Edit Shamir shares">
                       <i class="fa-thin fa-share-nodes"></i>
                       Shares
                     </button>
                   </div>
                 </div>
+                {#if pinPromptId === secret.id}
+                  <div class="pin-prompt mt-sm mb-sm">
+                    <p class="text-xs mb-sm">Enter PIN to reveal seed phrase.</p>
+                    <PinInput bind:value={pinPromptValue} onComplete={async (enteredPin) => {
+                      const valid = await verifyPIN(enteredPin);
+                      if (valid) {
+                        const next = new Set(revealedIds);
+                        next.add(secret.id);
+                        revealedIds = next;
+                        pinPromptId = null;
+                      } else {
+                        pinPromptError = 'Invalid PIN.';
+                        pinPromptValue = '';
+                      }
+                    }} />
+                    {#if pinPromptError}
+                      <p class="text-xs mt-sm" style="color: var(--color-error);">{pinPromptError}</p>
+                    {/if}
+                  </div>
+                {/if}
                 <MnemonicGrid words={secret.mnemonic.split(' ')} masked={!revealedIds.has(secret.id)} />
               </div>
 
@@ -314,9 +393,59 @@
               {/if}
 
               <div class="detail-section mt-md">
-                <h3 class="text-xs text-muted mb-sm">CONFIG</h3>
-                <p class="text-xs">Path: <code>{secret.derivationPath}</code></p>
-                <p class="text-xs">Type: <code>{formatPathType(secret.pathType)}</code></p>
+                <div class="share-sets-header">
+                  <h3 class="text-xs text-muted">SHARE SETS</h3>
+                  <button class="badge badge-info badge-btn" onclick={() => openReprintPopup(secret.id)}>
+                    <i class="fa-thin fa-plus"></i> New Set
+                  </button>
+                </div>
+                <table class="data-table share-sets-table">
+                  <colgroup>
+                    <col style="width: 9em;" />
+                    <col style="width: 6em;" />
+                    <col />
+                    <col style="width: 3em;" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Config</th>
+                      <th>Created</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><span class="idx-badge">001</span></td>
+                      <td><span class="text-xs">{secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares}</span></td>
+                      <td><span class="text-xs text-muted">Original &middot; {formatDateFull(secret.createdAt)}</span></td>
+                      <td></td>
+                    </tr>
+                    {#if secret.shareSets}
+                      {#each secret.shareSets as ss, ssIdx}
+                        <tr>
+                          <td><span class="idx-badge">{String(ssIdx + 2).padStart(3, '0')}</span></td>
+                          <td><span class="text-xs">{ss.threshold}/{ss.totalShares}</span></td>
+                          <td><span class="text-xs text-muted">{formatDateFull(ss.createdAt)}</span></td>
+                          <td class="actions">
+                            {#if deleteShareSetId === ss.id}
+                              <button class="btn-icon" onclick={() => handleDeleteShareSet(secret, ss.id)} title="Confirm delete" style="color: var(--color-error);">
+                                <i class="fa-thin fa-check"></i>
+                              </button>
+                              <button class="btn-icon" onclick={() => { deleteShareSetId = null; }} title="Cancel">
+                                <i class="fa-thin fa-xmark"></i>
+                              </button>
+                            {:else}
+                              <button class="btn-icon" onclick={() => { deleteShareSetId = ss.id; }} title="Delete share set">
+                                <i class="fa-thin fa-trash"></i>
+                              </button>
+                            {/if}
+                          </td>
+                        </tr>
+                      {/each}
+                    {/if}
+                  </tbody>
+                </table>
               </div>
 
               <div class="detail-actions mt-md">
@@ -334,11 +463,11 @@
                 </button>
               </div>
 
-              <!-- Reprint popup -->
+              <!-- Shares popup (reprint + new set) -->
               {#if reprintId === secret.id}
-                <div class="popup-overlay" onclick={() => { reprintId = null; }}></div>
-                <div class="popup-card">
-                  <h4 class="text-xs text-muted mb-sm">CHOOSE CARD SIZE</h4>
+                <button class="popup-overlay" onclick={() => { reprintId = null; }} aria-label="Close popup"></button>
+                <div class="popup-card shares-popup">
+                  <h4 class="text-xs text-muted mb-sm">CARD SIZE</h4>
                   <div class="popup-options">
                     <button class:primary={reprintLayout === 'full-page'} onclick={() => { reprintLayout = 'full-page'; }}>
                       <i class="fa-thin fa-file"></i> Full Page
@@ -350,10 +479,31 @@
                       <i class="fa-thin fa-credit-card"></i> Wallet
                     </button>
                   </div>
-                  <div class="popup-actions mt-md">
+
+                  <div class="popup-divider"></div>
+
+                  <h4 class="text-xs text-muted mb-sm">REPRINT ORIGINAL ({secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares})</h4>
+                  <button class="primary" onclick={() => handleReprint(secret)}>
+                    <i class="fa-thin fa-print"></i> Reprint
+                  </button>
+
+                  <div class="popup-divider"></div>
+
+                  <h4 class="text-xs text-muted mb-sm">NEW SHARE SET</h4>
+                  <div class="new-shares-form">
+                    <label class="text-xs">
+                      Threshold
+                      <input type="number" bind:value={newSharesThreshold} min="2" max={newSharesTotal} style="width: 80px;" />
+                    </label>
+                    <label class="text-xs">
+                      Total
+                      <input type="number" bind:value={newSharesTotal} min={newSharesThreshold} max="20" style="width: 80px;" />
+                    </label>
+                  </div>
+                  <div class="popup-actions mt-sm">
                     <button onclick={() => { reprintId = null; }}>Cancel</button>
-                    <button class="primary" onclick={() => handleReprint(secret)}>
-                      <i class="fa-thin fa-print"></i> Print
+                    <button class="primary" onclick={() => handleGenerateNewShares(secret)}>
+                      <i class="fa-thin fa-plus"></i> Generate &amp; Print
                     </button>
                   </div>
                 </div>
@@ -361,7 +511,7 @@
 
               <!-- Duplicate popup -->
               {#if duplicateId === secret.id}
-                <div class="popup-overlay" onclick={() => { duplicateId = null; }}></div>
+                <button class="popup-overlay" onclick={() => { duplicateId = null; }} aria-label="Close popup"></button>
                 <div class="popup-card">
                   <h4 class="text-xs text-muted mb-sm">DUPLICATE WITH DERIVATION PATH</h4>
                   <div class="popup-options">
@@ -373,7 +523,7 @@
                     <input
                       type="text"
                       bind:value={dupCustomPath}
-                      placeholder="m/44'/60'/0'/0/{index}"
+                      placeholder={"m/44'/60'/0'/0/{index}"}
                       class="mt-sm"
                       style="width: 100%;"
                     />
@@ -437,19 +587,13 @@
   .item-name {
     font-weight: 600;
   }
-  .position-badge {
-    font-size: 0.65rem;
-    color: var(--color-text-muted);
-    margin-right: 0.25rem;
-    font-weight: 400;
-  }
   .item-badges {
     display: flex;
     align-items: center;
     gap: 0.35rem;
   }
   .vault-item-detail {
-    padding: var(--spacing-sm) 0 var(--spacing-md);
+    padding: var(--spacing-sm) 0 0;
   }
   .detail-top-bar {
     display: flex;
@@ -541,35 +685,103 @@
     gap: 0.35rem;
     align-items: center;
   }
-  .reveal-btn {
-    background: none;
-    border: 1px solid var(--color-border);
-    box-shadow: none;
-    padding: 0.2rem 0.5rem;
-    font-size: 0.7rem;
-    color: var(--color-text-muted);
+  .badge-btn {
     cursor: pointer;
+    border: none;
+    background: var(--color-bg-alt);
+    box-shadow: none;
     text-transform: uppercase;
+    letter-spacing: 0;
   }
-  .reveal-btn:hover {
-    color: var(--color-text);
-    border-color: var(--color-border-dark);
+  .badge-btn:hover {
     box-shadow: none;
     transform: none;
+    opacity: 0.8;
   }
-  .reveal-btn i {
-    margin-right: 0.2rem;
+  .badge-btn i {
+    margin-right: 0.15rem;
+  }
+  .share-sets-table {
+    table-layout: fixed;
+  }
+  .share-sets-table td:nth-child(2) {
+    white-space: nowrap;
+  }
+  .idx-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.1rem 0.3rem;
+    border: 1px solid var(--color-accent);
+    color: var(--color-accent);
+    background: rgba(92, 107, 192, 0.1);
+    text-align: center;
+    min-width: 1.6em;
+  }
+  .popup-divider {
+    border-top: 1px solid var(--color-border);
+    margin: var(--spacing-md) 0;
+  }
+  .shares-popup {
+    min-width: 360px;
+  }
+  .pin-prompt {
+    padding: var(--spacing-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-alt);
+  }
+  .new-shares-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .new-shares-form label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
   }
   .detail-actions {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    justify-content: flex-end;
+    padding-right: 2em;
+    padding-top: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+  }
+  .share-sets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+  }
+  .config-inline {
+    display: flex;
+    gap: 1.5rem;
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--spacing-sm);
   }
   .popup-overlay {
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.3);
     z-index: 100;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: default;
+    text-transform: none;
+    box-shadow: none;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .popup-overlay:hover {
+    box-shadow: none;
+    transform: none;
   }
   .popup-card {
     position: fixed;

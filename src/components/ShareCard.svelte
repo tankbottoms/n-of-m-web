@@ -7,8 +7,8 @@
     addresses?: DerivedAddress[];
   } = $props();
 
-  let pinInfo = $derived(share.hasPIN ? 'PIN: ENABLED' : 'PIN: NONE');
-  let ppInfo = $derived(share.hasPassphrase ? 'PASSPHRASE: ENABLED' : 'PASSPHRASE: NONE');
+  let pinInfo = $derived(share.hasPIN ? 'Pin: enabled' : 'Pin: none');
+  let ppInfo = $derived(share.hasPassphrase ? 'Passphrase: enabled' : 'Passphrase: none');
   let date = $derived(new Date().toISOString().replace('T', ' ').slice(0, 16));
 
   let shareQrSrc = $state('');
@@ -18,7 +18,7 @@
     try {
       if ((window as any).QRious) {
         const canvas = document.createElement('canvas');
-        new (window as any).QRious({ element: canvas, value: data, size, level: 'M', padding: 0 });
+        new (window as any).QRious({ element: canvas, value: data, size, level: 'H', padding: 0 });
         return canvas.toDataURL('image/png');
       }
     } catch {}
@@ -26,7 +26,7 @@
   }
 
   function generateQRs() {
-    shareQrSrc = renderQR(JSON.stringify(share), 400);
+    shareQrSrc = renderQR(JSON.stringify(share), 800);
   }
 
   $effect(() => {
@@ -97,8 +97,8 @@
 
   <div class="card-footer">
     <div class="footer-warning">
-      &#9888; DO NOT LOSE THIS CARD — SHARE {share.shareIndex}
-      OF {share.totalShares}. NEED {share.threshold}+ TO RECOVER.
+      &#9888; Do not lose this card — Share {share.shareIndex}
+      of {share.totalShares}. Need {share.threshold}+ to recover.
     </div>
     <div class="footer-info">{pinInfo} · {ppInfo}</div>
     <div class="footer-bottom">
@@ -157,7 +157,7 @@
   .card-qr-section {
     display: flex;
     gap: 0.75rem;
-    align-items: flex-start;
+    align-items: center;
   }
   .share-qr-box {
     border: 2px solid var(--color-border-dark);
@@ -165,12 +165,13 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    overflow: hidden;
+    width: 204px;
+    height: 204px;
   }
   .share-qr-box img {
     display: block;
-    width: 156px;
-    height: 156px;
+    width: 100%;
+    height: 100%;
     image-rendering: pixelated;
   }
   @media (max-width: 480px) {
@@ -179,8 +180,8 @@
       align-items: center;
     }
     .share-qr-box img {
-      width: 136px;
-      height: 136px;
+      width: 170px;
+      height: 170px;
     }
     .qr-right {
       text-align: center;
@@ -244,14 +245,12 @@
   .footer-warning {
     font-size: 0.6rem;
     font-weight: bold;
-    text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 0.15rem;
   }
   .footer-info {
     font-size: 0.6rem;
     font-weight: bold;
-    text-transform: uppercase;
     color: var(--color-text-muted);
     margin-bottom: 0.15rem;
   }

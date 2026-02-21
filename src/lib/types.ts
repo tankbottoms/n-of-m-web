@@ -13,6 +13,13 @@ export interface ShamirConfig {
   totalShares: number;
 }
 
+export interface ShareSet {
+  id: string;
+  createdAt: number;
+  threshold: number;
+  totalShares: number;
+}
+
 export interface SecretRecord {
   id: string;
   name: string;
@@ -26,6 +33,7 @@ export interface SecretRecord {
   addressCount: number;
   addresses: DerivedAddress[];
   shamirConfig: ShamirConfig;
+  shareSets?: ShareSet[];
   metadata?: Record<string, string>;
   hasPassphrase: boolean;
   hasPIN: boolean;
