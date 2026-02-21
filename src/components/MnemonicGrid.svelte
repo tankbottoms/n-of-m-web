@@ -27,6 +27,10 @@
     padding: 0.5rem;
     font-family: var(--font-mono);
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.8rem;
   }
 
   .word-index {
@@ -42,7 +46,6 @@
     text-align: center;
     font-size: 0.85rem;
     font-weight: 600;
-    margin-top: 0.5rem;
   }
 
   @media (max-width: 768px) {

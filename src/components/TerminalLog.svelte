@@ -28,11 +28,17 @@
 </div>
 
 <style>
+  .terminal-log {
+    font-size: 0.65rem;
+  }
   .expanded {
     max-height: 800px;
   }
   .log-time {
     color: var(--color-text-muted);
-    font-size: 0.8em;
+    font-size: 0.85em;
+  }
+  .log-line {
+    line-height: 1.4;
   }
 </style>

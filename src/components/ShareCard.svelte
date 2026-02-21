@@ -169,8 +169,8 @@
   }
   .share-qr-box img {
     display: block;
-    width: 140px;
-    height: 140px;
+    width: 156px;
+    height: 156px;
     image-rendering: pixelated;
   }
   @media (max-width: 480px) {
@@ -179,8 +179,8 @@
       align-items: center;
     }
     .share-qr-box img {
-      width: 120px;
-      height: 120px;
+      width: 136px;
+      height: 136px;
     }
     .qr-right {
       text-align: center;

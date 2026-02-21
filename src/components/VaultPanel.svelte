@@ -292,10 +292,16 @@
               <div class="detail-section">
                 <div class="seed-header">
                   <h3 class="text-xs text-muted">SEED PHRASE</h3>
-                  <button class="reveal-btn" onclick={() => { const next = new Set(revealedIds); if (next.has(secret.id)) next.delete(secret.id); else next.add(secret.id); revealedIds = next; }}>
-                    <i class="fa-thin {revealedIds.has(secret.id) ? 'fa-eye-slash' : 'fa-eye'}"></i>
-                    {revealedIds.has(secret.id) ? 'Hide' : 'Reveal'}
-                  </button>
+                  <div class="seed-header-actions">
+                    <button class="reveal-btn" onclick={() => { const next = new Set(revealedIds); if (next.has(secret.id)) next.delete(secret.id); else next.add(secret.id); revealedIds = next; }}>
+                      <i class="fa-thin {revealedIds.has(secret.id) ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                      {revealedIds.has(secret.id) ? 'Hide' : 'Reveal'}
+                    </button>
+                    <button class="reveal-btn" onclick={() => openReprintPopup(secret.id)} title="Edit Shamir shares">
+                      <i class="fa-thin fa-share-nodes"></i>
+                      Shares
+                    </button>
+                  </div>
                 </div>
                 <MnemonicGrid words={secret.mnemonic.split(' ')} masked={!revealedIds.has(secret.id)} />
               </div>
@@ -529,6 +535,11 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--spacing-sm);
+  }
+  .seed-header-actions {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
   }
   .reveal-btn {
     background: none;

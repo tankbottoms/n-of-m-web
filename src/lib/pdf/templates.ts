@@ -177,9 +177,9 @@ export function renderPageHTML(
   /* Full page: card fills the page */
   .page > .card { flex: 1; display: flex; flex-direction: column; }
 
-  /* Compact: 2 cards, each ~48% of page */
-  .compact-page { gap: 8px; justify-content: flex-start; }
-  .compact-page > .card { flex: 0 0 auto; max-height: 48%; overflow: hidden; }
+  /* Compact: 2 cards per page with 1cm gap */
+  .compact-page { gap: 10mm; justify-content: flex-start; }
+  .compact-page > .card { flex: 0 0 auto; max-height: 45%; overflow: hidden; }
 
   /* Wallet: 4 cards, each ~24% of page, no partial spanning */
   .wallet-page { gap: 6px; justify-content: flex-start; }
@@ -218,6 +218,18 @@ export function renderPageHTML(
   .footer-warning { font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.5; margin-bottom: 2px; }
   .footer-info { font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #666; margin-bottom: 2px; }
   .footer-guid { font-size: 7px; font-family: 'Courier New', monospace; color: #666; text-align: right; letter-spacing: 0.5px; }
+
+  /* Screen view: cards at 50% width, centered, with 10em spacing */
+  @media screen {
+    body { background: #f0f0f0; padding: 2em 0; }
+    .page { page-break-after: auto; min-height: auto; width: 50%; margin: 0 auto; gap: 10em; }
+    .page > .card { box-shadow: 6px 6px 0 rgba(0,0,0,0.2); margin-bottom: 10em; }
+    .page > .card:last-child { margin-bottom: 0; }
+    .compact-page > .card { max-height: none; margin-bottom: 10em; }
+    .compact-page > .card:last-child { margin-bottom: 0; }
+    .wallet-page > .card { max-height: none; margin-bottom: 10em; }
+    .wallet-page > .card:last-child { margin-bottom: 0; }
+  }
 </style>
 </head>
 <body>

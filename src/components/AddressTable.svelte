@@ -28,7 +28,12 @@
   }
 </script>
 
-<table class="data-table">
+<table class="data-table addr-table">
+  <colgroup>
+    <col style="width: 2.5rem;" />
+    <col />
+    <col style="width: 4.5rem;" />
+  </colgroup>
   <thead>
     <tr>
       <th>#</th>
@@ -39,7 +44,7 @@
   <tbody>
     {#each addresses as addr}
       <tr>
-        <td class="text-muted">{addr.index}</td>
+        <td><span class="idx-badge">{addr.index}</span></td>
         <td>
           {#if showPrivateKeys && getMode(addr.index) === 'key'}
             <span
@@ -75,6 +80,10 @@
 </table>
 
 <style>
+  .addr-table {
+    table-layout: fixed;
+    width: 100%;
+  }
   .addr-mono {
     font-family: var(--font-mono);
     font-size: 0.75rem;
@@ -82,6 +91,8 @@
   .addr-full {
     word-break: break-all;
     display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .clickable {
     cursor: pointer;
@@ -108,5 +119,17 @@
     color: var(--color-text);
     box-shadow: none;
     transform: none;
+  }
+  .idx-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.1rem 0.3rem;
+    border: 1px solid var(--color-accent);
+    color: var(--color-accent);
+    background: rgba(92, 107, 192, 0.1);
+    text-align: center;
+    min-width: 1.6em;
   }
 </style>

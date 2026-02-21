@@ -114,38 +114,62 @@
   async function generateOrImportMnemonic() {
     if (importMode) {
       const trimmed = importText.trim().toLowerCase();
+      log(`Validating imported mnemonic...`, 'fetch');
       if (!validateMnemonic(trimmed)) {
-        log('Invalid mnemonic phrase', 'error');
+        log('Invalid mnemonic phrase -- checksum mismatch or invalid words', 'error');
         return;
       }
       mnemonic = trimmed;
       wordCount = trimmed.split(' ').length as WordCount;
-      log(`Imported ${wordCount}-word mnemonic`, 'found');
+      const bits = wordCount === 12 ? 128 : wordCount === 15 ? 160 : wordCount === 18 ? 192 : wordCount === 21 ? 224 : 256;
+      log(`Validated ${wordCount}-word mnemonic (${bits}-bit entropy, checksum OK)`, 'found');
+      log(`BIP39 word list: english (2048 words)`, 'info');
     } else {
+      const bits = wordCount === 12 ? 128 : wordCount === 15 ? 160 : wordCount === 18 ? 192 : wordCount === 21 ? 224 : 256;
+      const checksumBits = bits / 32;
       if (entropyMode === 'motion' || entropyMode === 'combined') {
+        log(`Collecting mouse entropy bytes...`, 'fetch');
         const motionBytes = collector.toEntropy();
+        log(`Mouse entropy: ${motionBytes.length} bytes collected`, 'info');
+        log(`Mixing with system CSPRNG via SHA-256...`, 'fetch');
         const mixed = await mixEntropy(motionBytes);
+        log(`Mixed entropy: ${bits} bits + ${checksumBits}-bit checksum = ${bits + checksumBits} total bits`, 'info');
         mnemonic = generateMnemonic(wordCount, mixed);
-        log(`Generated ${wordCount}-word mnemonic with mouse entropy`, 'found');
+        log(`Generated ${wordCount}-word mnemonic (mouse+system entropy)`, 'found');
       } else {
+        log(`Requesting ${bits} bits from crypto.getRandomValues()...`, 'fetch');
         mnemonic = generateMnemonic(wordCount);
-        log(`Generated ${wordCount}-word mnemonic with system CSPRNG`, 'found');
+        log(`System CSPRNG: ${bits}-bit entropy + ${checksumBits}-bit SHA-256 checksum`, 'info');
+        log(`Generated ${wordCount}-word mnemonic (${bits} bits, BIP39 english)`, 'found');
       }
+      log(`Encoding: ${wordCount} words from BIP39 word list (2048 entries)`, 'info');
     }
     nextStep();
   }
 
   function deriveAddrs() {
-    log(`Deriving ${addressCount} addresses via ${pathType}...`, 'fetch');
+    const path = pathType === 'custom' ? customPath : DERIVATION_PATHS[pathType].template;
+    log(`Deriving ${addressCount} addresses via ${formatPathLabel(pathType)}...`, 'fetch');
+    log(`Path template: ${path}`, 'info');
+    if (passphrase) log(`BIP39 passphrase: enabled (${passphrase.length} chars)`, 'info');
     addresses = deriveAddresses(mnemonic, pathType, addressCount, customPath, passphrase || undefined);
-    log(`Derived ${addresses.length} addresses`, 'found');
+    log(`Derived ${addresses.length} addresses (HMAC-SHA512 → secp256k1)`, 'found');
+    if (addresses.length > 0) log(`First address: ${addresses[0].address.slice(0, 10)}...${addresses[0].address.slice(-6)}`, 'info');
     nextStep();
+  }
+
+  function formatPathLabel(pt: PathType): string {
+    if (pt === 'metamask') return 'MetaMask (BIP44)';
+    if (pt === 'ledger') return 'Ledger (BIP44)';
+    return 'Custom';
   }
 
   function generateShares() {
     log(`Splitting secret into ${totalShares} shares (threshold: ${threshold})...`, 'fetch');
     const secretBuf = Buffer.from(mnemonic);
+    log(`Secret: ${secretBuf.length} bytes → GF(2^8) polynomial degree ${threshold - 1}`, 'info');
     const rawShares = split(secretBuf, { shares: totalShares, threshold });
+    log(`Shamir split complete: ${rawShares.length} shares × ${rawShares[0]?.length || 0} bytes each`, 'info');
     const id = uuid();
     const name = secretName || datetimePlaceholder();
 
