@@ -190,8 +190,8 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
   .compact-page > .card { flex: 0 0 auto; max-height: 45%; overflow: hidden; }
 
   /* Wallet: 4 cards per page, stacked */
-  .wallet-page { height: 100vh; gap: 4px; justify-content: flex-start; }
-  .wallet-page > .card { flex: 0 0 auto; max-height: 24%; overflow: hidden; }
+  .wallet-page { height: 100vh; gap: 3em; justify-content: flex-start; }
+  .wallet-page > .card { flex: 0 0 auto; overflow: hidden; }
   .wallet-page .card { border-width: 1.5px; box-shadow: none; }
   .wallet-page .header { padding: 2px 6px; font-size: 8px; border-bottom-width: 1.5px; }
   .wallet-page .header-title { font-size: 9px; }

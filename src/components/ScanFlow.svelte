@@ -65,6 +65,7 @@
   }
 
   function handleScan(data: string): boolean {
+    if (state !== 'scanning') return false;
     try {
       const payload: SharePayload = JSON.parse(data);
       if (payload.v !== 1 || !payload.shareData || !payload.id) {
@@ -98,6 +99,7 @@
         if (payload.hasPIN) {
           state = 'pin_required';
         } else {
+          state = 'reconstructing';
           reconstruct();
         }
       }
@@ -178,9 +180,14 @@
         }
       },
     });
-    await scanner.start(videoEl);
-    cameraActive = true;
-    startGuidanceTimer();
+    try {
+      await scanner.start(videoEl);
+      cameraActive = true;
+      startGuidanceTimer();
+    } catch (e) {
+      scanner = null;
+      error = e instanceof Error ? e.message : 'Camera access denied';
+    }
   }
 
   function stopCamera() {
@@ -209,11 +216,13 @@
         error = 'Failed to read PDF -- try uploading individual page screenshots';
       }
     } else {
-      const data = await scanFromFile(file);
-      if (data) {
-        handleScan(data);
-      } else {
+      const results = await scanFromFile(file);
+      if (results.length === 0) {
         error = 'No QR code found in image -- try a higher resolution screenshot';
+      } else {
+        for (const data of results) {
+          handleScan(data);
+        }
       }
     }
     input.value = '';
