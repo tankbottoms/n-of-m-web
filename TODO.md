@@ -4,13 +4,28 @@
 
 Before any monetization or feature work, lock down the print layouts:
 
-- [ ] Full-page layout: verify QR scannability at 480px with error correction H
-- [ ] 2-up layout: verify both cards fit within printable area on letter/A4
-- [ ] Wallet-size layout: verify 4 cards per page with no overflow
+- [x] Full-page layout: QR fills container, 1 card/page, all 10 addresses, notes section
+- [x] 2-up layout: 2 cards/page, 5 addresses each, condensed instructions
+- [x] Wallet-size layout: 4 cards/page with wallet-specific CSS overrides (compact padding/fonts/borders)
+- [x] QR code sizing: inline style with explicit pixel dimensions, image-rendering: pixelated
+- [x] Vault save toast: top-center slide-in with fade-out animation (replaced jumping popup)
+- [x] Default derivation addresses: increased from 5 to 10
 - [ ] Test print from Safari, Chrome, Firefox -- check margins, page breaks
 - [ ] Verify downloaded HTML renders identically to print preview
 - [ ] Standalone HTML (`n-of-m-standalone.html`) opens and functions offline
 - [ ] Screen preview spacing/sizing looks correct at all viewport widths
+- [ ] Verify QR scannability at all sizes (full 280px, compact 160px, wallet 100px) with error correction H
+
+## Session Review Tasks
+
+Items to verify in next session:
+
+- [ ] Wallet layout: confirm 4 cards fit without overflow when printing from real browser (not just Playwright PDF)
+- [ ] Compact layout: verify 2-up cards don't clip at bottom on letter paper vs A4
+- [ ] Toast animation: verify save-to-vault toast appears at top center and fades smoothly (no jumping)
+- [ ] Service worker: clear caches and verify new code loads without stale SW interference
+- [ ] Print dialog: test File > Print from Chrome/Safari matches downloaded HTML output
+- [ ] Address display: verify full-page shows 10, compact shows 5, wallet shows 3 addresses
 
 ---
 
