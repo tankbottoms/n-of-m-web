@@ -104,55 +104,69 @@ function scanWithUpscale(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2
   return upResult?.data ?? null;
 }
 
-/** Scan a single canvas for ALL QR codes by repeatedly finding and masking each one. */
-function scanCanvasForAll(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): string[] {
-  const found: string[] = [];
-  // Work on a copy so we can paint over found codes
-  const workCanvas = document.createElement('canvas');
-  workCanvas.width = canvas.width;
-  workCanvas.height = canvas.height;
-  const workCtx = workCanvas.getContext('2d');
-  if (!workCtx) return found;
-  workCtx.drawImage(canvas, 0, 0);
+/** Scan a region of a canvas for a single QR code. */
+function scanRegion(
+  source: HTMLCanvasElement,
+  sx: number, sy: number, sw: number, sh: number
+): string | null {
+  const tile = document.createElement('canvas');
+  tile.width = sw;
+  tile.height = sh;
+  const tctx = tile.getContext('2d');
+  if (!tctx) return null;
+  tctx.drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
+  const result = scanOne(tile, tctx);
+  if (result) return result.data;
 
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const result = scanOne(workCanvas, workCtx);
-    if (!result) break;
-    if (!found.includes(result.data)) {
-      found.push(result.data);
-    }
-    // Mask the found QR code with white -- use generous padding (50% of QR size)
-    // to ensure the finder patterns are fully obliterated
-    const padX = Math.max(result.location.w * 0.5, 40);
-    const padY = Math.max(result.location.h * 0.5, 40);
-    workCtx.fillStyle = '#ffffff';
-    workCtx.fillRect(
-      result.location.x - padX,
-      result.location.y - padY,
-      result.location.w + padX * 2,
-      result.location.h + padY * 2
-    );
-  }
-  return found;
+  // Retry with 2x upscale for small QR codes
+  const up = document.createElement('canvas');
+  up.width = sw * 2;
+  up.height = sh * 2;
+  const uctx = up.getContext('2d');
+  if (!uctx) return null;
+  uctx.imageSmoothingEnabled = false;
+  uctx.drawImage(tile, 0, 0, up.width, up.height);
+  const upResult = scanOne(up, uctx);
+  return upResult?.data ?? null;
 }
 
-/** Scan a canvas for ALL QR codes, trying at native resolution and 2x upscale. */
-function scanAllQRCodes(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): string[] {
-  // Try native resolution first
-  const found = scanCanvasForAll(canvas, ctx);
+/**
+ * Scan a canvas for ALL QR codes using a tiled region approach.
+ * jsQR struggles to find QR codes in canvases much larger than the code itself,
+ * so we split the canvas into overlapping tiles and scan each independently.
+ */
+function scanAllQRCodes(canvas: HTMLCanvasElement, _ctx: CanvasRenderingContext2D): string[] {
+  const found: string[] = [];
+  const W = canvas.width;
+  const H = canvas.height;
 
-  // Also try 2x upscale to catch small QR codes
-  const upCanvas = document.createElement('canvas');
-  upCanvas.width = canvas.width * 2;
-  upCanvas.height = canvas.height * 2;
-  const upCtx = upCanvas.getContext('2d');
-  if (upCtx) {
-    upCtx.imageSmoothingEnabled = false;
-    upCtx.drawImage(canvas, 0, 0, upCanvas.width, upCanvas.height);
-    const upFound = scanCanvasForAll(upCanvas, upCtx);
-    for (const data of upFound) {
-      if (!found.includes(data)) {
-        found.push(data);
+  // First try scanning the whole canvas directly (works for single-QR images)
+  const wholeResult = scanOne(canvas, _ctx);
+  if (wholeResult && !found.includes(wholeResult.data)) {
+    found.push(wholeResult.data);
+  }
+
+  // Tile the canvas into overlapping regions at multiple granularities.
+  // jsQR needs the QR code to be a significant portion of the image.
+  // We scan with increasingly fine grids until all codes are found.
+  const divisions = [2, 3, 4, 6, 8];
+  for (const div of divisions) {
+    const stepX = Math.ceil(W / div);
+    const stepY = Math.ceil(H / div);
+    // Tiles are 2x the step size to create 50% overlap
+    const tileW = Math.min(stepX * 2, W);
+    const tileH = Math.min(stepY * 2, H);
+
+    for (let y = 0; y < H - 10; y += stepY) {
+      for (let x = 0; x < W - 10; x += stepX) {
+        const rw = Math.min(tileW, W - x);
+        const rh = Math.min(tileH, H - y);
+        if (rw < 80 || rh < 80) continue;
+
+        const data = scanRegion(canvas, x, y, rw, rh);
+        if (data && !found.includes(data)) {
+          found.push(data);
+        }
       }
     }
   }
