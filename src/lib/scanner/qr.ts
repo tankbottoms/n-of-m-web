@@ -104,8 +104,8 @@ function scanWithUpscale(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2
   return upResult?.data ?? null;
 }
 
-/** Scan a canvas for ALL QR codes by repeatedly finding and masking each one. */
-function scanAllQRCodes(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): string[] {
+/** Scan a single canvas for ALL QR codes by repeatedly finding and masking each one. */
+function scanCanvasForAll(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): string[] {
   const found: string[] = [];
   // Work on a copy so we can paint over found codes
   const workCanvas = document.createElement('canvas');
@@ -115,22 +115,48 @@ function scanAllQRCodes(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D
   if (!workCtx) return found;
   workCtx.drawImage(canvas, 0, 0);
 
-  for (let attempt = 0; attempt < 10; attempt++) {
+  for (let attempt = 0; attempt < 20; attempt++) {
     const result = scanOne(workCanvas, workCtx);
     if (!result) break;
     if (!found.includes(result.data)) {
       found.push(result.data);
     }
-    // Mask the found QR code with white to find the next one
-    const pad = 20;
+    // Mask the found QR code with white -- use generous padding (50% of QR size)
+    // to ensure the finder patterns are fully obliterated
+    const padX = Math.max(result.location.w * 0.5, 40);
+    const padY = Math.max(result.location.h * 0.5, 40);
     workCtx.fillStyle = '#ffffff';
     workCtx.fillRect(
-      result.location.x - pad,
-      result.location.y - pad,
-      result.location.w + pad * 2,
-      result.location.h + pad * 2
+      result.location.x - padX,
+      result.location.y - padY,
+      result.location.w + padX * 2,
+      result.location.h + padY * 2
     );
   }
+  return found;
+}
+
+/** Scan a canvas for ALL QR codes, trying at native resolution and 2x upscale. */
+function scanAllQRCodes(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): string[] {
+  // Try native resolution first
+  const found = scanCanvasForAll(canvas, ctx);
+
+  // Also try 2x upscale to catch small QR codes
+  const upCanvas = document.createElement('canvas');
+  upCanvas.width = canvas.width * 2;
+  upCanvas.height = canvas.height * 2;
+  const upCtx = upCanvas.getContext('2d');
+  if (upCtx) {
+    upCtx.imageSmoothingEnabled = false;
+    upCtx.drawImage(canvas, 0, 0, upCanvas.width, upCanvas.height);
+    const upFound = scanCanvasForAll(upCanvas, upCtx);
+    for (const data of upFound) {
+      if (!found.includes(data)) {
+        found.push(data);
+      }
+    }
+  }
+
   return found;
 }
 
@@ -167,7 +193,7 @@ export async function scanFromPDF(file: File): Promise<string[]> {
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: 2 });
+    const viewport = page.getViewport({ scale: 3 });
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;

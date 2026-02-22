@@ -45,6 +45,9 @@
   // Share set delete confirmation
   let deleteShareSetId = $state<string | null>(null);
 
+  // Export popup state
+  let exportId = $state<string | null>(null);
+
   // PIN verification for seed phrase reveal
   let pinPromptId = $state<string | null>(null);
   let pinPromptValue = $state('');
@@ -219,7 +222,7 @@
     return pt.charAt(0).toUpperCase() + pt.slice(1);
   }
 
-  function exportSecret(secret: SecretRecord) {
+  function exportAsJSON(secret: SecretRecord) {
     const exportData = {
       name: secret.name,
       createdAt: new Date(secret.createdAt).toISOString(),
@@ -244,6 +247,15 @@
     a.download = `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-export-${datetimeStamp()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    exportId = null;
+  }
+
+  async function exportAsQR(secret: SecretRecord) {
+    await ensureQRious();
+    const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
+    const html = generatePrintHTML(shares, '#A8D8EA', 'full-page', secret.addresses.slice(0, 5));
+    downloadHTML(html, `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-shares-${datetimeStamp()}.html`);
+    exportId = null;
   }
 
   onMount(() => {
@@ -455,7 +467,7 @@
                 <button onclick={() => openDuplicatePopup(secret)}>
                   <i class="fa-thin fa-copy"></i> Duplicate
                 </button>
-                <button onclick={() => exportSecret(secret)}>
+                <button onclick={() => { exportId = secret.id; }}>
                   <i class="fa-thin fa-download"></i> Export
                 </button>
                 <button onclick={() => handleDelete(secret.id)} style="color: var(--color-error);">
@@ -533,6 +545,29 @@
                     <button class="primary" onclick={() => handleDuplicate(secret)}>
                       <i class="fa-thin fa-copy"></i> Duplicate
                     </button>
+                  </div>
+                </div>
+              {/if}
+
+              <!-- Export popup -->
+              {#if exportId === secret.id}
+                <button class="popup-overlay" onclick={() => { exportId = null; }} aria-label="Close popup"></button>
+                <div class="popup-card export-popup">
+                  <h4 class="text-xs text-muted mb-sm">EXPORT FORMAT</h4>
+                  <div class="export-options">
+                    <button class="export-option" onclick={() => exportAsJSON(secret)}>
+                      <i class="fa-thin fa-file-code"></i>
+                      <span class="export-option-label">JSON</span>
+                      <span class="export-option-desc text-xs text-muted">Full backup with mnemonic, addresses, and metadata</span>
+                    </button>
+                    <button class="export-option" onclick={() => exportAsQR(secret)}>
+                      <i class="fa-thin fa-qrcode"></i>
+                      <span class="export-option-label">QR Codes</span>
+                      <span class="export-option-desc text-xs text-muted">Shamir share cards ({secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares}) as printable HTML</span>
+                    </button>
+                  </div>
+                  <div class="popup-actions mt-md">
+                    <button onclick={() => { exportId = null; }}>Cancel</button>
                   </div>
                 </div>
               {/if}
@@ -805,5 +840,44 @@
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
+  }
+  .export-popup {
+    min-width: 320px;
+    max-width: 400px;
+  }
+  .export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .export-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: var(--spacing-sm) var(--spacing-md);
+    text-align: left;
+    text-transform: none;
+    letter-spacing: 0;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+  }
+  .export-option:hover {
+    border-color: var(--color-accent);
+    background: var(--color-bg-alt);
+  }
+  .export-option i {
+    font-size: 1.4rem;
+    min-width: 1.6rem;
+    text-align: center;
+    color: var(--color-accent);
+    margin-top: 0.1rem;
+  }
+  .export-option-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .export-option-desc {
+    display: block;
+    line-height: 1.3;
   }
 </style>

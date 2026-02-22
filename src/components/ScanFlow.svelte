@@ -294,7 +294,7 @@
       {/if}
 
       <div class="camera-area">
-        <video bind:this={videoEl} class="camera-video" class:hidden={!cameraActive} playsinline></video>
+        <video bind:this={videoEl} class="camera-video" class:hidden={!cameraActive} playsinline autoplay muted></video>
 
         {#if cameraActive}
           <div class="scan-overlay" class:detected={scanStatus === 'detected'}>
