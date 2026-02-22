@@ -258,6 +258,36 @@
     exportId = null;
   }
 
+  async function exportAsQRImage(secret: SecretRecord) {
+    await ensureQRious();
+    const exportData = {
+      name: secret.name,
+      createdAt: new Date(secret.createdAt).toISOString(),
+      mnemonic: secret.mnemonic,
+      wordCount: secret.wordCount,
+      derivationPath: secret.derivationPath,
+      pathType: secret.pathType,
+      addressCount: secret.addressCount,
+      addresses: secret.addresses.map(a => ({ index: a.index, address: a.address })),
+      shamirConfig: secret.shamirConfig,
+      hasPassphrase: secret.hasPassphrase,
+      hasPIN: secret.hasPIN,
+    };
+    const json = JSON.stringify(exportData);
+    const canvas = document.createElement('canvas');
+    new (window as any).QRious({ element: canvas, value: json, size: 1024, level: 'L', padding: 16 });
+    canvas.toBlob((blob: Blob | null) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-${datetimeStamp()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+    exportId = null;
+  }
+
   onMount(() => {
     loadSecrets();
   });
@@ -560,9 +590,14 @@
                       <span class="export-option-label">JSON</span>
                       <span class="export-option-desc text-xs text-muted">Full backup with mnemonic, addresses, and metadata</span>
                     </button>
-                    <button class="export-option" onclick={() => exportAsQR(secret)}>
+                    <button class="export-option" onclick={() => exportAsQRImage(secret)}>
                       <i class="fa-thin fa-qrcode"></i>
-                      <span class="export-option-label">QR Codes</span>
+                      <span class="export-option-label">QR Code PNG</span>
+                      <span class="export-option-desc text-xs text-muted">Single QR code image with full secret data</span>
+                    </button>
+                    <button class="export-option" onclick={() => exportAsQR(secret)}>
+                      <i class="fa-thin fa-print"></i>
+                      <span class="export-option-label">Share Cards</span>
                       <span class="export-option-desc text-xs text-muted">Shamir share cards ({secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares}) as printable HTML</span>
                     </button>
                   </div>
