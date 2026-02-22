@@ -880,6 +880,13 @@
     min-width: 320px;
     max-width: 400px;
   }
+  @media (max-width: 400px) {
+    .export-popup {
+      min-width: unset;
+      width: calc(100vw - 24px);
+      max-width: none;
+    }
+  }
   .export-options {
     display: flex;
     flex-direction: column;

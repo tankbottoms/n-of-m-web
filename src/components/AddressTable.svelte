@@ -132,4 +132,38 @@
     text-align: center;
     min-width: 1.6em;
   }
+
+  @media (max-width: 480px) {
+    .addr-table {
+      display: block;
+    }
+    .addr-table thead {
+      display: none;
+    }
+    .addr-table tbody {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .addr-table tr {
+      display: block;
+      border: 1px solid var(--color-border);
+      padding: 0.75rem;
+      background: var(--color-bg-alt);
+    }
+    .addr-table td {
+      display: block;
+      padding: 0.25rem 0 !important;
+      border: none !important;
+    }
+    .addr-table td:first-child {
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    .addr-table .actions {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--color-border);
+    }
+  }
 </style>
