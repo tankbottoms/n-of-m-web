@@ -13,6 +13,8 @@ export class QRScanner {
   private scanner: QrScanner | null = null;
   private config: ScannerConfig;
   private cooldown = false;
+  private decodeErrorCount = 0;
+  private lastErrorLogTime = 0;
 
   constructor(config: ScannerConfig) {
     this.config = config;
@@ -25,18 +27,27 @@ export class QRScanner {
     this.scanner = new QrScanner(
       videoElement,
       (result) => {
-        if (this.cooldown) return;
+        console.log('[QRScanner] QR code detected:', result.data);
+        if (this.cooldown) {
+          console.log('[QRScanner] In cooldown, ignoring');
+          return;
+        }
         this.cooldown = true;
         this.config.onStatusChange?.('detected');
         const accepted = this.config.onScan(result.data);
+        console.log('[QRScanner] onScan callback returned:', accepted);
         setTimeout(() => {
           this.cooldown = false;
           this.config.onStatusChange?.('scanning');
         }, accepted ? 1500 : 500);
       },
       {
-        onDecodeError: () => {
-          // Silent -- qr-scanner fires this on every frame without a QR code
+        onDecodeError: (error) => {
+          this.decodeErrorCount++;
+          // Log every 100 frames to show we're getting video data but not finding QR codes
+          if (this.decodeErrorCount % 100 === 0) {
+            console.log(`[QRScanner] Processed ${this.decodeErrorCount} frames, no QR found. Last error:`, error?.message || error);
+          }
         },
         preferredCamera: 'environment',
         maxScansPerSecond: 10,
@@ -53,6 +64,9 @@ export class QRScanner {
       console.log('[QRScanner] Video element srcObject:', videoElement.srcObject);
       console.log('[QRScanner] Video element readyState:', videoElement.readyState);
       console.log('[QRScanner] Video element paused:', videoElement.paused);
+      console.log('[QRScanner] Scanner is running and listening for QR codes...');
+      this.decodeErrorCount = 0;
+      this.lastErrorLogTime = Date.now();
 
       // Explicitly ensure video is playing (iOS Safari workaround)
       if (videoElement.paused) {
