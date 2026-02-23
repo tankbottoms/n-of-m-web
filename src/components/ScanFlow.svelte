@@ -31,6 +31,7 @@
   // svelte-ignore non_reactive_update
   let fileInput: HTMLInputElement;
   let cameraActive = $state(false);
+  let uploadStatus = $state<string | null>(null);
 
   // Scan overlay state
   let scanStatus = $state<ScanStatus>('idle');
@@ -202,28 +203,39 @@
     const file = input.files?.[0];
     if (!file) return;
 
-    if (file.type === 'application/pdf') {
-      try {
+    try {
+      uploadStatus = `Loading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...`;
+
+      if (file.type === 'application/pdf') {
+        uploadStatus = `Scanning PDF (${file.name})...`;
         const results = await scanFromPDF(file);
         if (results.length === 0) {
           error = 'No QR codes found in PDF';
+          uploadStatus = null;
         } else {
+          uploadStatus = `Found ${results.length} QR code${results.length !== 1 ? 's' : ''}. Processing...`;
           for (const data of results) {
             handleScan(data);
           }
+          uploadStatus = null;
         }
-      } catch {
-        error = 'Failed to read PDF -- try uploading individual page screenshots';
-      }
-    } else {
-      const results = await scanFromFile(file);
-      if (results.length === 0) {
-        error = 'No QR code found in image -- try a higher resolution screenshot';
       } else {
-        for (const data of results) {
-          handleScan(data);
+        uploadStatus = `Scanning image...`;
+        const results = await scanFromFile(file);
+        if (results.length === 0) {
+          error = 'No QR code found in image -- try a higher resolution screenshot';
+          uploadStatus = null;
+        } else {
+          uploadStatus = `Found ${results.length} QR code${results.length !== 1 ? 's' : ''}. Processing...`;
+          for (const data of results) {
+            handleScan(data);
+          }
+          uploadStatus = null;
         }
       }
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to process file';
+      uploadStatus = null;
     }
     input.value = '';
   }
@@ -330,11 +342,18 @@
         {:else}
           <button class="primary" onclick={startCamera}><i class="fa-thin fa-camera"></i> Start Camera</button>
         {/if}
-        <button onclick={() => fileInput.click()}>
+        <button onclick={() => fileInput.click()} disabled={!!uploadStatus}>
           <i class="fa-thin fa-upload"></i> Upload Image/PDF
         </button>
         <input bind:this={fileInput} type="file" accept="image/*,application/pdf" onchange={handleFileUpload} style="display: none;" />
       </div>
+
+      {#if uploadStatus}
+        <div class="upload-status mt-md">
+          <div class="status-spinner"></div>
+          <p class="text-sm">{uploadStatus}</p>
+        </div>
+      {/if}
 
       {#if error}
         <p class="text-xs mt-sm" style="color: var(--color-error);">{error}</p>
@@ -576,5 +595,29 @@
   }
   .vault-saved-notice i {
     margin-right: 0.25rem;
+  }
+
+  .upload-status {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-bg-alt);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+  }
+
+  .status-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 </style>
