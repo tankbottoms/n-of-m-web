@@ -15,6 +15,8 @@ export class QRScanner {
   private cooldown = false;
   private decodeErrorCount = 0;
   private lastErrorLogTime = 0;
+  private fallbackInterval: ReturnType<typeof setInterval> | null = null;
+  private fallbackFrameCount = 0;
 
   constructor(config: ScannerConfig) {
     this.config = config;
@@ -73,6 +75,10 @@ export class QRScanner {
         console.log('[QRScanner] Video is paused, calling play()');
         await videoElement.play().catch(err => console.log('[QRScanner] play() failed:', err));
       }
+
+      // Start fallback canvas-based scanning (helps with Safari compatibility issues)
+      console.log('[QRScanner] Starting fallback canvas scanning as backup...');
+      this.startFallbackCanvasScanning(videoElement);
     } catch (e) {
       console.error('[QRScanner] Start failed:', e);
       this.scanner.destroy();
@@ -84,7 +90,46 @@ export class QRScanner {
     }
   }
 
+  private startFallbackCanvasScanning(videoElement: HTMLVideoElement): void {
+    // Fallback for when qr-scanner's zxing doesn't detect codes
+    // This periodically captures video frames and scans them with jsQR
+    this.fallbackInterval = setInterval(() => {
+      this.fallbackFrameCount++;
+      if (this.fallbackFrameCount % 10 !== 0) return; // Scan every 10 frames
+
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = videoElement.videoWidth || 640;
+        canvas.height = videoElement.videoHeight || 480;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(videoElement, 0, 0);
+        const codes = scanAllQRCodes(canvas, ctx);
+
+        for (const code of codes) {
+          if (code && !this.cooldown) {
+            console.log('[QRScanner] Fallback canvas scan detected:', code);
+            this.cooldown = true;
+            this.config.onStatusChange?.('detected');
+            const accepted = this.config.onScan(code);
+            setTimeout(() => {
+              this.cooldown = false;
+              this.config.onStatusChange?.('scanning');
+            }, accepted ? 1500 : 500);
+          }
+        }
+      } catch (e) {
+        // Silent - canvas may not be available in background
+      }
+    }, 100); // Check every 100ms
+  }
+
   stop(): void {
+    if (this.fallbackInterval) {
+      clearInterval(this.fallbackInterval);
+      this.fallbackInterval = null;
+    }
     if (this.scanner) {
       this.scanner.stop();
       this.scanner.destroy();
