@@ -200,6 +200,26 @@
     stopGuidanceTimer();
   }
 
+  async function extractSharesFromHTML(content: string): Promise<string[]> {
+    const shares: string[] = [];
+    // Match QRious constructor calls with the value parameter
+    const qriousMatches = content.matchAll(/new\s+QRious\s*\(\s*\{[^}]*value:\s*('|")([^'"]+)\1[^}]*\}\s*\)/g);
+
+    for (const match of qriousMatches) {
+      const shareData = match[2];
+      // Unescape JSON string escapes
+      try {
+        const unescaped = shareData
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, '\\');
+        shares.push(unescaped);
+      } catch {
+        // Skip invalid share data
+      }
+    }
+    return shares;
+  }
+
   async function handleFileUpload(e: Event) {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -240,6 +260,23 @@
         } else {
           uploadStatus = `Processing ${results.length} QR code${results.length !== 1 ? 's' : ''}...`;
           for (const data of results) {
+            handleScan(data);
+          }
+          uploadStatus = null;
+        }
+      } else if (file.type === 'text/html' || file.name.endsWith('.html')) {
+        // Handle HTML exports
+        uploadStatus = 'Parsing HTML...';
+        const content = await file.text();
+        const shares = await extractSharesFromHTML(content);
+
+        if (shares.length === 0) {
+          error = 'No share data found in HTML file';
+          uploadStatus = null;
+        } else {
+          uploadStatus = `Found ${shares.length} share${shares.length !== 1 ? 's' : ''}. Processing...`;
+          for (const data of shares) {
+            playConfirmBeep();
             handleScan(data);
           }
           uploadStatus = null;
@@ -290,12 +327,46 @@
     <div class="scan-content">
       <div class="step-instructions mb-md">
         <i class="fa-thin fa-circle-info"></i>
-        {#if !targetId}
-          Scan your first share card to begin recovery. The app will detect how many shares are needed.
-        {:else}
-          Scan {targetThreshold - scannedShares.length} more share card{targetThreshold - scannedShares.length !== 1 ? 's' : ''} to reconstruct the secret.
-          Need {targetThreshold} of {targetTotal} total.
-        {/if}
+        <div>
+          {#if !targetId}
+            <strong>Scan your first share card to begin recovery.</strong> The app will detect how many shares are needed.
+          {:else}
+            <strong>Scan {targetThreshold - scannedShares.length} more share card{targetThreshold - scannedShares.length !== 1 ? 's' : ''}</strong> to reconstruct the secret.
+            Need {targetThreshold} of {targetTotal} total.
+          {/if}
+        </div>
+      </div>
+
+      <div class="scan-formats mb-md">
+        <div class="formats-header">
+          <i class="fa-thin fa-info-circle"></i> Accepted Formats
+        </div>
+        <div class="formats-list">
+          <div class="format-item">
+            <span class="format-icon"><i class="fa-thin fa-camera"></i></span>
+            <span class="format-label"><strong>Camera</strong> - Live QR code scanning from physical share cards</span>
+          </div>
+          <div class="format-item">
+            <span class="format-icon"><i class="fa-thin fa-image"></i></span>
+            <span class="format-label"><strong>Images</strong> - Screenshots of share cards (PNG, JPG, etc.)</span>
+          </div>
+          <div class="format-item">
+            <span class="format-icon"><i class="fa-thin fa-file-pdf"></i></span>
+            <span class="format-label"><strong>PDF Exports</strong> - Full, compact, or wallet-size PDFs from vault export</span>
+          </div>
+          <div class="format-item">
+            <span class="format-icon"><i class="fa-thin fa-file-code"></i></span>
+            <span class="format-label"><strong>HTML Files</strong> - Individual or combined HTML exports from vault</span>
+          </div>
+          <div class="format-item">
+            <span class="format-icon"><i class="fa-thin fa-qrcode"></i></span>
+            <span class="format-label"><strong>Vault QR Code</strong> - Complete vault configuration as PNG or image</span>
+          </div>
+        </div>
+        <div class="formats-warning">
+          <i class="fa-thin fa-triangle-exclamation"></i>
+          <span><strong>Important:</strong> Do not store PDF, HTML, or JSON exports on your computer. These files contain your encrypted shares and should be printed and kept secure, or deleted immediately after recovery.</span>
+        </div>
       </div>
 
       {#if targetId}
@@ -369,9 +440,9 @@
           <button class="primary" onclick={startCamera}><i class="fa-thin fa-camera"></i> Start Camera</button>
         {/if}
         <button onclick={() => fileInput.click()} disabled={!!uploadStatus}>
-          <i class="fa-thin fa-upload"></i> Upload Image/PDF
+          <i class="fa-thin fa-upload"></i> Upload Files
         </button>
-        <input bind:this={fileInput} type="file" accept="image/*,application/pdf" onchange={handleFileUpload} style="display: none;" />
+        <input bind:this={fileInput} type="file" accept="image/*,application/pdf,.html" onchange={handleFileUpload} style="display: none;" />
       </div>
 
       {#if uploadStatus}
@@ -457,6 +528,85 @@
     margin-right: 0.35rem;
     color: var(--color-accent);
   }
+
+  .scan-formats {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-alt);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .formats-header {
+    padding: 0.65rem 0.75rem;
+    background: linear-gradient(135deg, var(--color-accent-subtle) 0%, var(--color-bg-alt) 100%);
+    border-bottom: 1px solid var(--color-border);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .formats-header i {
+    color: var(--color-accent);
+  }
+
+  .formats-list {
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .format-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+  }
+
+  .format-icon {
+    flex-shrink: 0;
+    width: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-accent);
+    font-size: 0.9rem;
+    margin-top: 0.1rem;
+  }
+
+  .format-label {
+    flex: 1;
+  }
+
+  .format-label strong {
+    color: var(--color-text);
+  }
+
+  .formats-warning {
+    padding: 0.6rem 0.75rem;
+    background: rgba(255, 193, 7, 0.1);
+    border-top: 1px solid var(--color-border);
+    border-radius: 0 0 4px 4px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .formats-warning i {
+    flex-shrink: 0;
+    color: #ffc107;
+    margin-top: 0.05rem;
+  }
+
   .scanned-list {
     display: flex;
     gap: 0.35rem;
