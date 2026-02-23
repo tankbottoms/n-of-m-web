@@ -7,6 +7,7 @@ export interface ScannerConfig {
   onScan: (data: string) => boolean;
   onError?: (error: string) => void;
   onStatusChange?: (status: ScanStatus) => void;
+  displayCanvas?: HTMLCanvasElement;
 }
 
 export class QRScanner {
@@ -95,9 +96,12 @@ export class QRScanner {
     // This periodically captures video frames and scans them with jsQR
     // Frame skipping: process every 20 frames at 100ms intervals = ~2 fps
     // This reduces CPU usage by 40-50% while maintaining responsiveness
+    const displayCanvas = this.config.displayCanvas;
+
     this.fallbackInterval = setInterval(() => {
       this.fallbackFrameCount++;
-      if (this.fallbackFrameCount % 20 !== 0) return; // Scan every 20 frames (2 fps)
+      // Always draw to display canvas for visual feedback (smooth ~10 fps)
+      // But only scan for QR codes every 20 frames (~2 fps) to save CPU
 
       try {
         const canvas = document.createElement('canvas');
@@ -107,6 +111,20 @@ export class QRScanner {
         if (!ctx) return;
 
         ctx.drawImage(videoElement, 0, 0);
+
+        // Always render to display canvas for smooth visual feedback
+        if (displayCanvas) {
+          displayCanvas.width = canvas.width;
+          displayCanvas.height = canvas.height;
+          const displayCtx = displayCanvas.getContext('2d');
+          if (displayCtx) {
+            displayCtx.drawImage(canvas, 0, 0);
+          }
+        }
+
+        // Only scan for QR codes every 20 frames to reduce CPU usage
+        if (this.fallbackFrameCount % 20 !== 0) return;
+
         const codes = scanAllQRCodes(canvas, ctx);
 
         for (const code of codes) {
@@ -124,7 +142,7 @@ export class QRScanner {
       } catch (e) {
         // Silent - canvas may not be available in background
       }
-    }, 100); // Check every 100ms (with frame skipping: ~2 fps actual processing)
+    }, 100); // Check every 100ms
   }
 
   stop(): void {

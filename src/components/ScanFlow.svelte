@@ -29,6 +29,8 @@
   // svelte-ignore non_reactive_update
   let videoEl: HTMLVideoElement;
   // svelte-ignore non_reactive_update
+  let canvasEl: HTMLCanvasElement;
+  // svelte-ignore non_reactive_update
   let fileInput: HTMLInputElement;
   let cameraActive = $state(false);
   let uploadStatus = $state<string | null>(null);
@@ -182,6 +184,7 @@
           scanStartTime = Date.now();
         }
       },
+      displayCanvas: canvasEl,
     });
     try {
       await scanner.start(videoEl);
@@ -541,6 +544,7 @@
 
       <div class="camera-area">
         <video bind:this={videoEl} class="camera-video" class:hidden={!cameraActive} playsinline autoplay muted></video>
+        <canvas bind:this={canvasEl} class="camera-canvas" class:hidden={!cameraActive}></canvas>
 
         {#if cameraActive}
           <div class="scan-overlay" class:detected={scanStatus === 'detected'}>
@@ -766,6 +770,17 @@
     object-fit: cover;
   }
   .camera-video.hidden {
+    display: none;
+  }
+  .camera-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .camera-canvas.hidden {
     display: none;
   }
   .camera-placeholder {
