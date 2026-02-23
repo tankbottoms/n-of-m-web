@@ -77,12 +77,9 @@ export class QRScanner {
         await videoElement.play().catch(err => console.log('[QRScanner] play() failed:', err));
       }
 
-      // Make video element visible by overriding qr-scanner's inline hiding styles
-      // This is more efficient than canvas rendering
-      videoElement.style.opacity = '1';
-      videoElement.style.width = '100%';
-      videoElement.style.height = '100%';
-      console.log('[QRScanner] Video element made visible for display');
+      // Video element is hidden by qr-scanner by design
+      // Canvas rendering will handle both display and detection
+      console.log('[QRScanner] Using canvas for display and detection');
 
       // Start fallback canvas-based scanning (helps with Safari compatibility issues)
       console.log('[QRScanner] Starting fallback canvas scanning as backup...');
@@ -100,47 +97,45 @@ export class QRScanner {
 
   private startFallbackCanvasScanning(videoElement: HTMLVideoElement): void {
     // Fallback for when qr-scanner's zxing doesn't detect codes
-    // Scans video frames for QR codes using canvas
+    // Renders to display canvas AND scans for QR codes
+    const displayCanvas = this.config.displayCanvas;
     let lastScanTime = 0;
-    let scanCount = 0;
-    const SCAN_INTERVAL = 150; // Scan every 150ms for reliable detection
+    const SCAN_INTERVAL = 200; // Scan for QR every 200ms
 
-    console.log('[QRScanner] Starting fallback canvas scanning...');
+    console.log('[QRScanner] Starting fallback canvas scanning');
 
     this.fallbackInterval = setInterval(() => {
       this.fallbackFrameCount++;
 
       try {
-        // Check video dimensions
-        if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
-          if (this.fallbackFrameCount % 600 === 0) {
-            console.log(`[QRScanner] Waiting for video dimensions... frame ${this.fallbackFrameCount}`);
+        // Render to display canvas for smooth visual feedback
+        if (displayCanvas && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+          displayCanvas.width = videoElement.videoWidth;
+          displayCanvas.height = videoElement.videoHeight;
+          const ctx = displayCanvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(videoElement, 0, 0);
           }
-          return;
         }
 
-        // Scan for QR codes at intervals
+        // Scan for QR codes periodically
         const now = Date.now();
-        if (now - lastScanTime >= SCAN_INTERVAL) {
+        if (now - lastScanTime >= SCAN_INTERVAL && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
           lastScanTime = now;
-          scanCount++;
 
-          const scanCanvas = document.createElement('canvas');
-          scanCanvas.width = videoElement.videoWidth;
-          scanCanvas.height = videoElement.videoHeight;
-          const scanCtx = scanCanvas.getContext('2d');
-          if (!scanCtx) return;
+          const canvas = document.createElement('canvas');
+          canvas.width = videoElement.videoWidth;
+          canvas.height = videoElement.videoHeight;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
 
-          scanCtx.drawImage(videoElement, 0, 0);
-          const codes = scanAllQRCodes(scanCanvas, scanCtx);
-
-          if (scanCount % 10 === 0) {
-            console.log(`[QRScanner] Scan #${scanCount}: found ${codes.length} codes`);
-          }
+          ctx.drawImage(videoElement, 0, 0);
+          const codes = scanAllQRCodes(canvas, ctx);
+          console.log(`[QRScanner] Scan attempt: found ${codes.length} QR codes`);
 
           for (const code of codes) {
             if (code && !this.cooldown) {
-              console.log('[QRScanner] Canvas fallback detected QR code:', code.substring(0, 50));
+              console.log('[QRScanner] QR code detected');
               this.cooldown = true;
               this.config.onStatusChange?.('detected');
               const accepted = this.config.onScan(code);
@@ -152,9 +147,9 @@ export class QRScanner {
           }
         }
       } catch (e) {
-        console.log('[QRScanner] Canvas scan error:', e);
+        console.error('[QRScanner] Scan error:', e);
       }
-    }, 60); // Check frequently for reliable detection
+    }, 75); // Run every 75ms
   }
 
   stop(): void {
