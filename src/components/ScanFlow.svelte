@@ -32,6 +32,8 @@
   let fileInput: HTMLInputElement;
   let cameraActive = $state(false);
   let uploadStatus = $state<string | null>(null);
+  let scanProgress = $state(0);
+  let scanAnimationFrame = $state(0);
 
   // Scan overlay state
   let scanStatus = $state<ScanStatus>('idle');
@@ -205,20 +207,38 @@
 
     try {
       uploadStatus = `Loading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...`;
+      scanProgress = 0;
+      scanAnimationFrame = 0;
 
       if (file.type === 'application/pdf') {
-        uploadStatus = `Scanning PDF (0%)...`;
-        const results = await scanFromPDF(file, (current, total) => {
+        let lastFoundCount = 0;
+        const animationInterval = setInterval(() => {
+          scanAnimationFrame = (scanAnimationFrame + 1) % 10;
+        }, 100);
+
+        const results = await scanFromPDF(file, (current, total, found) => {
           const percent = Math.round((current / total) * 100);
-          uploadStatus = `Scanning PDF page ${current}/${total} (${percent}%)...`;
+          scanProgress = percent;
+
+          // Beep for each newly found QR code
+          if (found > lastFoundCount) {
+            playConfirmBeep();
+            lastFoundCount = found;
+          }
+
+          uploadStatus = `Scanning page ${current}/${total} • Found ${found} QR code${found !== 1 ? 's' : ''}`;
         });
+
+        clearInterval(animationInterval);
+        scanProgress = 0;
+        scanAnimationFrame = 0;
+
         if (results.length === 0) {
           error = 'No QR codes found in PDF';
           uploadStatus = null;
         } else {
-          uploadStatus = `Found ${results.length} QR code${results.length !== 1 ? 's' : ''}. Processing...`;
+          uploadStatus = `Processing ${results.length} QR code${results.length !== 1 ? 's' : ''}...`;
           for (const data of results) {
-            playConfirmBeep();
             handleScan(data);
           }
           uploadStatus = null;
@@ -355,8 +375,18 @@
 
       {#if uploadStatus}
         <div class="upload-status mt-md">
-          <div class="status-spinner"></div>
-          <p class="text-sm">{uploadStatus}</p>
+          <div class="status-spinner">
+            {['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'][scanAnimationFrame]}
+          </div>
+          <div class="status-content">
+            <p class="text-sm">{uploadStatus}</p>
+            {#if scanProgress > 0}
+              <div class="braille-progress-bar">
+                <div class="braille-progress-fill" style={`width: ${scanProgress}%`}></div>
+                <span class="progress-text">{scanProgress}%</span>
+              </div>
+            {/if}
+          </div>
         </div>
       {/if}
 
@@ -604,7 +634,7 @@
 
   .upload-status {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.75rem;
     padding: 0.75rem;
     background: var(--color-bg-alt);
@@ -613,16 +643,56 @@
   }
 
   .status-spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--color-border);
-    border-top-color: var(--color-accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    width: 24px;
+    height: 24px;
+    font-size: 1.5rem;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: var(--color-accent);
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  @keyframes spin {
-    to { transform: rotate(360deg); }
+  .status-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .braille-progress-bar {
+    position: relative;
+    width: 100%;
+    height: 16px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    font-family: 'Courier New', monospace;
+  }
+
+  .braille-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-success));
+    transition: width 0.2s ease-out;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 4px;
+    color: white;
+    font-weight: bold;
+  }
+
+  .progress-text {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--color-text);
+    pointer-events: none;
   }
 </style>

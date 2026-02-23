@@ -268,7 +268,7 @@ export async function scanFromFile(file: File): Promise<string[]> {
   });
 }
 
-export async function scanFromPDF(file: File, onProgress?: (current: number, total: number) => void): Promise<string[]> {
+export async function scanFromPDF(file: File, onProgress?: (current: number, total: number, found: number) => void): Promise<string[]> {
   const arrayBuffer = await file.arrayBuffer();
   // @ts-ignore -- CDN ESM import, no local type declarations
   const pdfjsLib = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/+esm') as any;
@@ -276,6 +276,9 @@ export async function scanFromPDF(file: File, onProgress?: (current: number, tot
 
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const results: string[] = [];
+
+  // Report initial progress
+  onProgress?.(0, pdf.numPages, 0);
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
@@ -294,8 +297,8 @@ export async function scanFromPDF(file: File, onProgress?: (current: number, tot
       }
     }
 
-    // Report progress
-    onProgress?.(i, pdf.numPages);
+    // Report progress with found count
+    onProgress?.(i, pdf.numPages, results.length);
   }
 
   return results;
