@@ -122,17 +122,7 @@ export function renderPageHTML(
 
   const hasImages = qrImages.length > 0 && qrImages.every(img => img.length > 0);
 
-  if (layout.cardsPerPage === 4) {
-    // Wallet size: 4 cards per page
-    pages = [];
-    for (let i = 0; i < shares.length; i += 4) {
-      const batch = shares.slice(i, i + 4);
-      const cards = batch.map((share, j) =>
-        renderCardHTML(share, qrDatas[i + j], highlightColor, layout, `card-${i + j}`, addresses, hasImages ? qrImages[i + j] : '')
-      ).join('\n');
-      pages.push(`<div class="page wallet-page">${cards}</div>`);
-    }
-  } else if (layout.cardsPerPage === 2) {
+  if (layout.cardsPerPage === 2) {
     // Compact: 2 cards per page
     pages = [];
     for (let i = 0; i < shares.length; i += 2) {
@@ -233,8 +223,6 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
     .page > .card:last-child { margin-bottom: 0; }
     .compact-page > .card { max-height: none; margin-bottom: 2em; }
     .compact-page > .card:last-child { margin-bottom: 0; }
-    .wallet-page > .card { max-height: none; margin-bottom: 2em; }
-    .wallet-page > .card:last-child { margin-bottom: 0; }
   }
 </style>
 </head>

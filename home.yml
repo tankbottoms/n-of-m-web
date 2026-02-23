@@ -1,0 +1,26 @@
+- generic [ref=e2]:
+  - button "Toggle theme" [ref=e3] [cursor=pointer]:
+    - generic [ref=e4]: 
+  - generic [ref=e5]:
+    - generic [ref=e1003]:
+      - heading "n of m" [level=1] [ref=e1004]
+      - paragraph [ref=e1005]: Shamir's Secret Sharing for Seed Phrases
+      - paragraph [ref=e1006]: Split. Print. Recover.
+      - generic [ref=e1007]:
+        - button " Generate" [ref=e1008] [cursor=pointer]:
+          - generic [ref=e1009]: 
+          - text: Generate
+        - button " Scan" [ref=e1010] [cursor=pointer]:
+          - generic [ref=e1011]: 
+          - text: Scan
+        - button " Vault" [ref=e1012] [cursor=pointer]:
+          - generic [ref=e1013]: 
+          - text: Vault
+        - button " Settings" [ref=e1014] [cursor=pointer]:
+          - generic [ref=e1015]: 
+          - text: Settings
+      - paragraph [ref=e1017]: Generate a seed phrase, split it into m shares where any n can reconstruct it. Print QR-coded share cards. Scan to recover. Fully offline.
+      - button " How it works" [ref=e1019] [cursor=pointer]:
+        - generic [ref=e1020]: 
+        - text: How it works
+    - contentinfo [ref=e25]: v0.3.0

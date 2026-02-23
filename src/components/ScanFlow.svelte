@@ -229,18 +229,24 @@
   async function handleFileUpload(e: Event) {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.warn('[ScanFlow] No file selected');
+      return;
+    }
 
     try {
       uploadStatus = `Loading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...`;
       scanProgress = 0;
       scanAnimationFrame = 0;
+      console.log(`[ScanFlow] Processing file: ${file.name}, type: ${file.type}, size: ${file.size}`);
 
       if (file.type === 'application/pdf') {
         let lastFoundCount = 0;
+
+        // Start animation that runs continuously during PDF scanning
         const animationInterval = setInterval(() => {
           scanAnimationFrame = (scanAnimationFrame + 1) % 10;
-        }, 40); // Faster animation (25fps instead of 10fps)
+        }, 50); // Animate every 50ms for smooth spinning
 
         const results = await scanFromPDF(file, (current, total, found) => {
           const percent = Math.round((current / total) * 100);
@@ -288,16 +294,21 @@
           uploadStatus = null;
         }
       } else {
-        uploadStatus = `Scanning image...`;
+        const isVaultQR = file.name.includes('vault-qr') || file.type.startsWith('image/');
+        uploadStatus = isVaultQR ? `Scanning vault QR code...` : `Scanning image...`;
+        console.log(`[ScanFlow] Scanning ${isVaultQR ? 'vault QR' : 'image'} file`);
         const results = await scanFromFile(file);
         if (results.length === 0) {
-          error = 'No QR code found in image -- try a higher resolution screenshot';
+          error = isVaultQR
+            ? 'No vault QR code found -- ensure image is clear and well-lit'
+            : 'No QR code found in image -- try a higher resolution screenshot';
           uploadStatus = null;
         } else {
           uploadStatus = `Found ${results.length} QR code${results.length !== 1 ? 's' : ''}. Processing...`;
           for (const data of results) {
             playConfirmBeep();
-            handleScan(data);
+            const scanned = handleScan(data);
+            console.log(`[ScanFlow] Scanned QR ${results.indexOf(data) + 1}/${results.length}, valid: ${scanned}`);
           }
           uploadStatus = null;
         }
