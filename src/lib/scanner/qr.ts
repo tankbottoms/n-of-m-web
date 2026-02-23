@@ -93,55 +93,42 @@ export class QRScanner {
 
   private startFallbackCanvasScanning(videoElement: HTMLVideoElement): void {
     // Fallback for when qr-scanner's zxing doesn't detect codes
-    // Uses requestAnimationFrame for smooth display + periodic QR scanning
+    // Simple, reliable approach: render display canvas + scan for QR codes
     const displayCanvas = this.config.displayCanvas;
-    let scanCanvas: HTMLCanvasElement | null = null;
-    let scanCtx: CanvasRenderingContext2D | null = null;
     let lastScanTime = 0;
-    const SCAN_INTERVAL = 200; // Scan every 200ms (~5 fps) for QR detection
+    const SCAN_INTERVAL = 100; // Scan every 100ms for QR codes
 
-    const renderFrame = () => {
-      if (!this.fallbackInterval) return; // Stop if scanner was stopped
+    this.fallbackInterval = setInterval(() => {
+      this.fallbackFrameCount++;
 
       try {
-        // Render to display canvas for smooth visual feedback (native ~30-60 fps)
-        if (displayCanvas) {
-          const w = videoElement.videoWidth || 640;
-          const h = videoElement.videoHeight || 480;
-          if (w > 0 && h > 0) {
-            displayCanvas.width = w;
-            displayCanvas.height = h;
-            const displayCtx = displayCanvas.getContext('2d');
-            if (displayCtx) {
-              displayCtx.drawImage(videoElement, 0, 0);
-              if (this.fallbackFrameCount % 300 === 0) {
-                console.log(`[QRScanner] Display canvas updated: ${w}x${h}, frame ${this.fallbackFrameCount}`);
-              }
-            }
+        // Render to display canvas for visual feedback
+        if (displayCanvas && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+          displayCanvas.width = videoElement.videoWidth;
+          displayCanvas.height = videoElement.videoHeight;
+          const displayCtx = displayCanvas.getContext('2d');
+          if (displayCtx) {
+            displayCtx.drawImage(videoElement, 0, 0);
           }
         }
 
-        // Scan for QR codes at reduced frequency to save CPU
+        // Scan for QR codes every 100ms
         const now = Date.now();
         if (now - lastScanTime >= SCAN_INTERVAL) {
           lastScanTime = now;
 
-          // Create or reuse scan canvas
-          if (!scanCanvas) {
-            scanCanvas = document.createElement('canvas');
-          }
-          scanCanvas.width = videoElement.videoWidth || 640;
-          scanCanvas.height = videoElement.videoHeight || 480;
-          scanCtx = scanCanvas.getContext('2d');
-          if (!scanCtx) return;
+          const canvas = document.createElement('canvas');
+          canvas.width = videoElement.videoWidth || 640;
+          canvas.height = videoElement.videoHeight || 480;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
 
-          scanCtx.drawImage(videoElement, 0, 0);
-          const codes = scanAllQRCodes(scanCanvas, scanCtx);
-          console.log(`[QRScanner] Scan attempt at frame ${this.fallbackFrameCount}, found ${codes.length} codes`);
+          ctx.drawImage(videoElement, 0, 0);
+          const codes = scanAllQRCodes(canvas, ctx);
 
           for (const code of codes) {
             if (code && !this.cooldown) {
-              console.log('[QRScanner] Fallback canvas scan detected, length:', code.length, 'first 50 chars:', code.substring(0, 50));
+              console.log('[QRScanner] Fallback canvas scan detected:', code.substring(0, 100));
               this.cooldown = true;
               this.config.onStatusChange?.('detected');
               const accepted = this.config.onScan(code);
@@ -155,15 +142,7 @@ export class QRScanner {
       } catch (e) {
         // Silent - canvas may not be available in background
       }
-
-      requestAnimationFrame(renderFrame);
-    };
-
-    // Start the animation loop
-    this.fallbackInterval = setInterval(() => {
-      // Keep interval reference for stop() to work
-    }, 100);
-    requestAnimationFrame(renderFrame);
+    }, 50); // Run every 50ms for responsive display (20 fps target)
   }
 
   stop(): void {
