@@ -817,7 +817,6 @@
     gap: 0.5rem;
     flex-wrap: wrap;
     justify-content: flex-end;
-    padding-right: 2em;
     padding-top: var(--spacing-md);
     padding-bottom: var(--spacing-sm);
   }
@@ -863,8 +862,9 @@
     border: 2px solid var(--color-border-dark);
     box-shadow: 6px 6px 0px var(--color-shadow);
     padding: var(--spacing-lg);
-    min-width: 320px;
-    max-width: 90vw;
+    min-width: 0;
+    width: calc(100vw - 2rem);
+    max-width: 400px;
   }
   .popup-options {
     display: flex;
@@ -877,15 +877,7 @@
     gap: 0.5rem;
   }
   .export-popup {
-    min-width: 320px;
     max-width: 400px;
-  }
-  @media (max-width: 400px) {
-    .export-popup {
-      min-width: unset;
-      width: calc(100vw - 24px);
-      max-width: none;
-    }
   }
   .export-options {
     display: flex;

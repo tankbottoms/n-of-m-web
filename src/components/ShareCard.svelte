@@ -174,7 +174,7 @@
     height: 100%;
     image-rendering: pixelated;
   }
-  @media (max-width: 480px) {
+  @media (max-width: 600px) {
     .card-qr-section {
       flex-direction: column;
       align-items: center;

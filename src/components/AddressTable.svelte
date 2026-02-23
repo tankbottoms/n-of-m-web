@@ -30,7 +30,7 @@
 
 <table class="data-table addr-table">
   <colgroup>
-    <col style="width: 9em;" />
+    <col style="width: 3.5rem;" />
     <col />
     <col style="width: 4.5rem;" />
   </colgroup>
@@ -131,6 +131,12 @@
     background: rgba(92, 107, 192, 0.1);
     text-align: center;
     min-width: 1.6em;
+  }
+
+  @media (max-width: 768px) {
+    .addr-mono {
+      font-size: 0.65rem;
+    }
   }
 
   @media (max-width: 480px) {
