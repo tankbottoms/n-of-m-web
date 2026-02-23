@@ -34,12 +34,12 @@ export const LAYOUTS: Record<LayoutType, LayoutConfig> = {
   },
   'wallet-size': {
     label: 'Wallet Size',
-    description: 'Four cards per page, small QR codes',
-    cardsPerPage: 4,
+    description: 'Two cards per page, scannable QR codes, portable size',
+    cardsPerPage: 2,
     cardWidth: '100%',
-    cardHeight: '23%',
-    qrSize: 100,
+    cardHeight: '48%',
+    qrSize: 160,
     orientation: 'portrait',
-    fontSize: 7,
+    fontSize: 9,
   },
 };
