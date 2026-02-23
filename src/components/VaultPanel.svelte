@@ -47,6 +47,9 @@
 
   // Export popup state
   let exportId = $state<string | null>(null);
+  let exportPassword = $state('');
+  let exportPasswordConfirm = $state('');
+  let exportPasswordError = $state('');
 
   // PIN verification for seed phrase reveal
   let pinPromptId = $state<string | null>(null);
@@ -222,7 +225,44 @@
     return pt.charAt(0).toUpperCase() + pt.slice(1);
   }
 
-  function exportAsJSON(secret: SecretRecord) {
+  async function encryptJSON(data: string, password: string): Promise<{ ciphertext: string; iv: string; salt: string }> {
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const key = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, hash: 'SHA-256', iterations: 100000 },
+      await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']),
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt']
+    );
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      encoder.encode(data)
+    );
+    return {
+      ciphertext: Array.from(new Uint8Array(ciphertext)).map(b => b.toString(16).padStart(2, '0')).join(''),
+      iv: Array.from(iv).map(b => b.toString(16).padStart(2, '0')).join(''),
+      salt: Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join(''),
+    };
+  }
+
+  async function exportAsJSON(secret: SecretRecord) {
+    if (!exportPassword || !exportPasswordConfirm) {
+      exportPasswordError = 'Password required';
+      return;
+    }
+    if (exportPassword !== exportPasswordConfirm) {
+      exportPasswordError = 'Passwords do not match';
+      return;
+    }
+    if (exportPassword.length < 8) {
+      exportPasswordError = 'Password must be at least 8 characters';
+      return;
+    }
+
     const exportData = {
       name: secret.name,
       createdAt: new Date(secret.createdAt).toISOString(),
@@ -240,13 +280,18 @@
       metadata: secret.metadata,
     };
     const json = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
+    const encrypted = await encryptJSON(json, exportPassword);
+    const encryptedFile = JSON.stringify({ v: 1, ...encrypted });
+    const blob = new Blob([encryptedFile], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-export-${datetimeStamp()}.json`;
+    a.download = `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-export-encrypted-${datetimeStamp()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    exportPassword = '';
+    exportPasswordConfirm = '';
+    exportPasswordError = '';
     exportId = null;
   }
 
@@ -581,29 +626,55 @@
 
               <!-- Export popup -->
               {#if exportId === secret.id}
-                <button class="popup-overlay" onclick={() => { exportId = null; }} aria-label="Close popup"></button>
+                <button class="popup-overlay" onclick={() => { exportId = null; exportPassword = ''; exportPasswordConfirm = ''; exportPasswordError = ''; }} aria-label="Close popup"></button>
                 <div class="popup-card export-popup">
-                  <h4 class="text-xs text-muted mb-sm">EXPORT FORMAT</h4>
-                  <div class="export-options">
-                    <button class="export-option" onclick={() => exportAsJSON(secret)}>
-                      <i class="fa-thin fa-file-code"></i>
-                      <span class="export-option-label">JSON</span>
-                      <span class="export-option-desc text-xs text-muted">Full backup with mnemonic, addresses, and metadata</span>
-                    </button>
-                    <button class="export-option" onclick={() => exportAsQRImage(secret)}>
-                      <i class="fa-thin fa-qrcode"></i>
-                      <span class="export-option-label">QR Code PNG</span>
-                      <span class="export-option-desc text-xs text-muted">Single QR code image with full secret data</span>
-                    </button>
-                    <button class="export-option" onclick={() => exportAsQR(secret)}>
-                      <i class="fa-thin fa-print"></i>
-                      <span class="export-option-label">Share Cards</span>
-                      <span class="export-option-desc text-xs text-muted">Shamir share cards ({secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares}) as printable HTML</span>
-                    </button>
-                  </div>
-                  <div class="popup-actions mt-md">
-                    <button onclick={() => { exportId = null; }}>Cancel</button>
-                  </div>
+                  {#if exportPassword !== ''}
+                    <!-- JSON Password Dialog -->
+                    <h4 class="text-xs text-muted mb-sm">SET EXPORT PASSWORD</h4>
+                    <p class="text-xs text-muted mb-md">This password will encrypt your seed phrase. Keep it safe.</p>
+                    <input
+                      type="password"
+                      bind:value={exportPassword}
+                      placeholder="Export password (min 8 chars)"
+                      style="width: 100%; margin-bottom: 0.5rem;"
+                    />
+                    <input
+                      type="password"
+                      bind:value={exportPasswordConfirm}
+                      placeholder="Confirm password"
+                      style="width: 100%; margin-bottom: 0.5rem;"
+                    />
+                    {#if exportPasswordError}
+                      <p class="text-xs mt-sm" style="color: var(--color-error);">{exportPasswordError}</p>
+                    {/if}
+                    <div class="popup-actions mt-md">
+                      <button onclick={() => { exportPassword = ''; exportPasswordConfirm = ''; exportPasswordError = ''; }}>Back</button>
+                      <button class="primary" onclick={() => exportAsJSON(secret)}>Export</button>
+                    </div>
+                  {:else}
+                    <!-- Format Selection -->
+                    <h4 class="text-xs text-muted mb-sm">EXPORT FORMAT</h4>
+                    <div class="export-options">
+                      <button class="export-option" onclick={() => { exportPassword = ' '; }}>
+                        <i class="fa-thin fa-file-code"></i>
+                        <span class="export-option-label">JSON</span>
+                        <span class="export-option-desc text-xs text-muted">Encrypted backup (password required)</span>
+                      </button>
+                      <button class="export-option" onclick={() => exportAsQRImage(secret)}>
+                        <i class="fa-thin fa-qrcode"></i>
+                        <span class="export-option-label">QR Code PNG</span>
+                        <span class="export-option-desc text-xs text-muted">Single QR code image with full secret data</span>
+                      </button>
+                      <button class="export-option" onclick={() => exportAsQR(secret)}>
+                        <i class="fa-thin fa-print"></i>
+                        <span class="export-option-label">Share Cards</span>
+                        <span class="export-option-desc text-xs text-muted">Shamir share cards ({secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares}) as printable HTML</span>
+                      </button>
+                    </div>
+                    <div class="popup-actions mt-md">
+                      <button onclick={() => { exportId = null; }}>Cancel</button>
+                    </div>
+                  {/if}
                 </div>
               {/if}
             </div>
