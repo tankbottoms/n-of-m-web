@@ -223,7 +223,7 @@ export async function scanFromFile(file: File): Promise<string[]> {
   });
 }
 
-export async function scanFromPDF(file: File): Promise<string[]> {
+export async function scanFromPDF(file: File, onProgress?: (current: number, total: number) => void): Promise<string[]> {
   const arrayBuffer = await file.arrayBuffer();
   // @ts-ignore -- CDN ESM import, no local type declarations
   const pdfjsLib = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/+esm') as any;
@@ -248,6 +248,9 @@ export async function scanFromPDF(file: File): Promise<string[]> {
         results.push(data);
       }
     }
+
+    // Report progress
+    onProgress?.(i, pdf.numPages);
   }
 
   return results;

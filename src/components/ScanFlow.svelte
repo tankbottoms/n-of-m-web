@@ -207,14 +207,18 @@
       uploadStatus = `Loading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...`;
 
       if (file.type === 'application/pdf') {
-        uploadStatus = `Scanning PDF (${file.name})...`;
-        const results = await scanFromPDF(file);
+        uploadStatus = `Scanning PDF (0%)...`;
+        const results = await scanFromPDF(file, (current, total) => {
+          const percent = Math.round((current / total) * 100);
+          uploadStatus = `Scanning PDF page ${current}/${total} (${percent}%)...`;
+        });
         if (results.length === 0) {
           error = 'No QR codes found in PDF';
           uploadStatus = null;
         } else {
           uploadStatus = `Found ${results.length} QR code${results.length !== 1 ? 's' : ''}. Processing...`;
           for (const data of results) {
+            playConfirmBeep();
             handleScan(data);
           }
           uploadStatus = null;
@@ -228,6 +232,7 @@
         } else {
           uploadStatus = `Found ${results.length} QR code${results.length !== 1 ? 's' : ''}. Processing...`;
           for (const data of results) {
+            playConfirmBeep();
             handleScan(data);
           }
           uploadStatus = null;
