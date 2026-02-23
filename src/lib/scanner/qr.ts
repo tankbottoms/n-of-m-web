@@ -105,12 +105,19 @@ export class QRScanner {
 
       try {
         // Render to display canvas for smooth visual feedback (native ~30-60 fps)
-        if (displayCanvas && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
-          displayCanvas.width = videoElement.videoWidth;
-          displayCanvas.height = videoElement.videoHeight;
-          const displayCtx = displayCanvas.getContext('2d');
-          if (displayCtx) {
-            displayCtx.drawImage(videoElement, 0, 0);
+        if (displayCanvas) {
+          const w = videoElement.videoWidth || 640;
+          const h = videoElement.videoHeight || 480;
+          if (w > 0 && h > 0) {
+            displayCanvas.width = w;
+            displayCanvas.height = h;
+            const displayCtx = displayCanvas.getContext('2d');
+            if (displayCtx) {
+              displayCtx.drawImage(videoElement, 0, 0);
+              if (this.fallbackFrameCount % 300 === 0) {
+                console.log(`[QRScanner] Display canvas updated: ${w}x${h}, frame ${this.fallbackFrameCount}`);
+              }
+            }
           }
         }
 
@@ -130,10 +137,11 @@ export class QRScanner {
 
           scanCtx.drawImage(videoElement, 0, 0);
           const codes = scanAllQRCodes(scanCanvas, scanCtx);
+          console.log(`[QRScanner] Scan attempt at frame ${this.fallbackFrameCount}, found ${codes.length} codes`);
 
           for (const code of codes) {
             if (code && !this.cooldown) {
-              console.log('[QRScanner] Fallback canvas scan detected:', code);
+              console.log('[QRScanner] Fallback canvas scan detected, length:', code.length, 'first 50 chars:', code.substring(0, 50));
               this.cooldown = true;
               this.config.onStatusChange?.('detected');
               const accepted = this.config.onScan(code);
