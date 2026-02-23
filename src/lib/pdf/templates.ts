@@ -231,7 +231,7 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
 
   /* Bottom section: QR + info side by side, stretches to fill remaining card space */
   .bottom-section { display: flex; flex-direction: row; gap: 12px; flex: 1; align-items: flex-start; }
-  .share-qr { border: 2px solid #000; padding: 4px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .share-qr { border: 2px solid #000; padding: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: ${layout.qrSize + 12}px; height: ${layout.qrSize + 12}px; }
   .share-qr canvas { display: block; }
   .share-qr img { display: block; image-rendering: pixelated; }
   .bottom-right { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
