@@ -605,7 +605,6 @@
             <span class="text-xs text-muted">LAYOUT: </span>
             <button class:primary={layoutType === 'full-page'} onclick={() => { layoutType = 'full-page'; }}>Full</button>
             <button class:primary={layoutType === '2-up'} onclick={() => { layoutType = '2-up'; }}>Compact</button>
-            <button class:primary={layoutType === 'wallet-size'} onclick={() => { layoutType = 'wallet-size'; }}>Wallet</button>
           </div>
 
           <div class="share-cards-grid">

@@ -10,7 +10,6 @@
   const LAYOUTS: { key: LayoutType; label: string; icon: string; description: string }[] = [
     { key: 'full-page', label: 'Full Page', icon: 'fa-file', description: 'One card per page' },
     { key: '2-up', label: 'Compact', icon: 'fa-columns', description: 'Two cards per page' },
-    { key: 'wallet-size', label: 'Wallet Size', icon: 'fa-credit-card', description: 'Four cards per page' },
   ];
   const COLORS = ['#A8D8EA', '#FFB7B2', '#FFDAC1', '#B5EAD7', '#C7CEEA', '#E2F0CB', '#F8E6E0', '#D5C4F8'];
 

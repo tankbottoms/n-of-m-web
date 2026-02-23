@@ -203,7 +203,8 @@
   async function extractSharesFromHTML(content: string): Promise<string[]> {
     const shares: string[] = [];
     // Match QRious constructor calls with the value parameter
-    const qriousMatches = content.matchAll(/new\s+QRious\s*\(\s*\{[^}]*value:\s*('|")([^'"]+)\1[^}]*\}\s*\)/g);
+    // The value is typically a JSON-stringified object: value: '{"v":1,...}'
+    const qriousMatches = content.matchAll(/value:\s*(['"])([^"']*?(?:\\.[^"']*?)*)\1/g);
 
     for (const match of qriousMatches) {
       const shareData = match[2];
@@ -211,10 +212,15 @@
       try {
         const unescaped = shareData
           .replace(/\\"/g, '"')
+          .replace(/\\'/g, "'")
+          .replace(/\\\//g, '/')
           .replace(/\\\\/g, '\\');
+        // Verify it's valid JSON before adding
+        JSON.parse(unescaped);
         shares.push(unescaped);
-      } catch {
+      } catch (e) {
         // Skip invalid share data
+        console.warn('[ScanFlow] Invalid share data in HTML:', e);
       }
     }
     return shares;
@@ -352,7 +358,7 @@
           </div>
           <div class="format-item">
             <span class="format-icon"><i class="fa-thin fa-file-pdf"></i></span>
-            <span class="format-label"><strong>PDF Exports</strong> - Full, compact, or wallet-size PDFs from vault export</span>
+            <span class="format-label"><strong>PDF Exports</strong> - Full-page or compact PDFs from vault export</span>
           </div>
           <div class="format-item">
             <span class="format-icon"><i class="fa-thin fa-file-code"></i></span>

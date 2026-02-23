@@ -17,7 +17,7 @@ export function renderCardHTML(
   const ppInfo = share.hasPassphrase ? 'Passphrase: enabled' : 'Passphrase: none';
   const isCompact = layout.cardsPerPage >= 2;
 
-  const maxAddrs = isWallet ? 3 : isCompact ? 5 : addresses.length;
+  const maxAddrs = isCompact ? 5 : addresses.length;
   const displayAddrs = addresses.slice(0, maxAddrs);
   const addressesHTML = addresses.length > 0 ? `
     <div class="addresses-section">

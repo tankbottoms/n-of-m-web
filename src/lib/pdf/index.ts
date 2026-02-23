@@ -82,7 +82,7 @@ export function downloadHTML(html: string, filename: string): void {
 
 export async function downloadPDF(html: string, filename: string): Promise<void> {
   try {
-    const { html2pdf } = await import('html2pdf.js');
+    const html2pdf = (await import('html2pdf.js')).default;
 
     const element = document.createElement('div');
     element.innerHTML = html;

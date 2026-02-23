@@ -628,9 +628,6 @@
                     <button class:primary={reprintLayout === '2-up'} onclick={() => { reprintLayout = '2-up'; }}>
                       <i class="fa-thin fa-columns"></i> Compact
                     </button>
-                    <button class:primary={reprintLayout === 'wallet-size'} onclick={() => { reprintLayout = 'wallet-size'; }}>
-                      <i class="fa-thin fa-credit-card"></i> Wallet
-                    </button>
                   </div>
 
                   <div class="popup-divider"></div>
