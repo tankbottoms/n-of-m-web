@@ -1,4 +1,4 @@
-export type LayoutType = 'full-page' | '2-up' | 'wallet-size';
+export type LayoutType = 'full-page' | '2-up';
 
 export interface LayoutConfig {
   label: string;
@@ -25,16 +25,6 @@ export const LAYOUTS: Record<LayoutType, LayoutConfig> = {
   '2-up': {
     label: 'Compact',
     description: 'Two cards per page, medium QR code',
-    cardsPerPage: 2,
-    cardWidth: '100%',
-    cardHeight: '48%',
-    qrSize: 160,
-    orientation: 'portrait',
-    fontSize: 9,
-  },
-  'wallet-size': {
-    label: 'Wallet Size',
-    description: 'Two cards per page, scannable QR codes, portable size',
     cardsPerPage: 2,
     cardWidth: '100%',
     cardHeight: '48%',

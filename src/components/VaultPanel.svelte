@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import type { SecretRecord, PathType, ShareSet, SharePayload } from '$lib/types';
   import { getAllSecrets, deleteSecret, updateSecret, hasVaultPassword, verifyVaultPassword, saveSecret } from '$lib/storage';
-  import { generatePrintHTML, printCards, downloadHTML, datetimeStamp, ensureQRious, generateAllLayoutsHTML } from '$lib/pdf';
+  import { generatePrintHTML, printCards, downloadHTML, downloadPDF, datetimeStamp, ensureQRious, generateAllLayoutsHTML } from '$lib/pdf';
   import type { LayoutType } from '$lib/pdf';
   import { split } from '$lib/shamir';
   import { deriveAddresses } from '$lib/wallet';
@@ -303,24 +303,23 @@
     exportId = null;
   }
 
-  async function exportAllPDFs(secret: SecretRecord) {
+  async function exportAllLayouts(secret: SecretRecord) {
     await ensureQRious();
     const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
     const timestamp = datetimeStamp();
     const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
 
-    // Download all three layouts with sequential names
+    // Download all layouts as PDF files
     const layouts = [
       { type: 'full-page' as const, label: 'full' },
-      { type: '2-up' as const, label: 'compact' },
-      { type: 'wallet-size' as const, label: 'wallet' }
+      { type: '2-up' as const, label: 'compact' }
     ];
 
     for (const layout of layouts) {
       const html = generatePrintHTML(shares, '#A8D8EA', layout.type, secret.addresses.slice(0, 5));
-      downloadHTML(html, `${safeName}-shares-${layout.label}-${timestamp}.html`);
+      await downloadPDF(html, `${safeName}-shares-${layout.label}-${timestamp}.pdf`);
       // Small delay between downloads to avoid browser throttling
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     exportId = null;
@@ -333,7 +332,7 @@
     const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
 
     const html = generateAllLayoutsHTML(shares, '#A8D8EA', secret.addresses.slice(0, 5));
-    downloadHTML(html, `${safeName}-shares-all-layouts-${timestamp}.html`);
+    await downloadPDF(html, `${safeName}-shares-all-layouts-${timestamp}.pdf`);
     exportId = null;
   }
 
@@ -737,15 +736,15 @@
                         <span class="export-option-label">Share Cards (Full)</span>
                         <span class="export-option-desc text-xs text-muted">Full-page layout ({secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares})</span>
                       </button>
-                      <button class="export-option" onclick={() => exportAllPDFs(secret)}>
+                      <button class="export-option" onclick={() => exportAllLayouts(secret)}>
                         <i class="fa-thin fa-download"></i>
-                        <span class="export-option-label">All Layouts (HTML)</span>
-                        <span class="export-option-desc text-xs text-muted">Download full, compact, and wallet as separate HTML files</span>
+                        <span class="export-option-label">All Layouts (PDF)</span>
+                        <span class="export-option-desc text-xs text-muted">Download full and compact layouts as separate PDF files</span>
                       </button>
                       <button class="export-option" onclick={() => exportAllLayoutsCombined(secret)}>
                         <i class="fa-thin fa-file"></i>
-                        <span class="export-option-label">Combined HTML</span>
-                        <span class="export-option-desc text-xs text-muted">All three layouts in one printable HTML document</span>
+                        <span class="export-option-label">Combined PDF</span>
+                        <span class="export-option-desc text-xs text-muted">Both layouts in one PDF document</span>
                       </button>
                       <button class="export-option" onclick={() => exportVaultQRCode(secret)}>
                         <i class="fa-thin fa-image"></i>

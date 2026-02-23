@@ -16,7 +16,6 @@ export function renderCardHTML(
   const pinInfo = share.hasPIN ? 'Pin: enabled' : 'Pin: none';
   const ppInfo = share.hasPassphrase ? 'Passphrase: enabled' : 'Passphrase: none';
   const isCompact = layout.cardsPerPage >= 2;
-  const isWallet = layout.cardsPerPage >= 4;
 
   const maxAddrs = isWallet ? 3 : isCompact ? 5 : addresses.length;
   const displayAddrs = addresses.slice(0, maxAddrs);
@@ -188,31 +187,6 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
   /* Compact: 2 cards per page with 1cm gap */
   .compact-page { gap: 10mm; justify-content: flex-start; }
   .compact-page > .card { flex: 0 0 auto; max-height: 45%; overflow: hidden; }
-
-  /* Wallet: 4 cards per page, stacked */
-  .wallet-page { height: 100vh; gap: 3em; justify-content: flex-start; }
-  .wallet-page > .card { flex: 0 0 auto; overflow: hidden; }
-  .wallet-page .card { border-width: 1.5px; box-shadow: none; }
-  .wallet-page .header { padding: 2px 6px; font-size: 8px; border-bottom-width: 1.5px; }
-  .wallet-page .header-title { font-size: 9px; }
-  .wallet-page .header-meta { font-size: 6px; }
-  .wallet-page .section { padding: 2px 6px; border-bottom-width: 1px; }
-  .wallet-page .section-label { font-size: 5px; letter-spacing: 1px; margin-bottom: 1px; }
-  .wallet-page .instructions-text { font-size: ${layout.fontSize - 1}px; line-height: 1.2; }
-  .wallet-page .instructions-text p { margin-bottom: 1px; }
-  .wallet-page .date-row { padding: 1px 6px; gap: 6px; }
-  .wallet-page .date-value { font-size: ${layout.fontSize}px; }
-  .wallet-page .bottom-section { gap: 6px; padding: 2px 6px; }
-  .wallet-page .share-qr { border-width: 1px; padding: 2px; }
-  .wallet-page .qr-info-top, .wallet-page .qr-info-bottom { font-size: ${Math.max(layout.fontSize - 2, 5)}px; line-height: 1.2; }
-  .wallet-page .qr-info-top { margin-bottom: 2px; }
-  .wallet-page .addresses-section .section-label { font-size: 5px; }
-  .wallet-page .derivation-path { font-size: ${layout.fontSize - 1}px; margin-bottom: 1px; }
-  .wallet-page .addr-item { font-size: ${Math.max(layout.fontSize - 2, 5)}px; line-height: 1.1; }
-  .wallet-page .footer { padding: 2px 6px; border-top-width: 1.5px; }
-  .wallet-page .footer-warning { font-size: 6px; margin-bottom: 1px; }
-  .wallet-page .footer-info { font-size: 5px; margin-bottom: 1px; }
-  .wallet-page .footer-guid { font-size: 5px; }
 
   /* Card base */
   .card { border: 3px solid #000; box-shadow: 4px 4px 0 #000; display: flex; flex-direction: column; width: 100%; overflow: hidden; }

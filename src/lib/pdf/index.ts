@@ -80,14 +80,37 @@ export function downloadHTML(html: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+export async function downloadPDF(html: string, filename: string): Promise<void> {
+  try {
+    const { html2pdf } = await import('html2pdf.js');
+
+    const element = document.createElement('div');
+    element.innerHTML = html;
+
+    const opt = {
+      margin: 10,
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+
+    await html2pdf().set(opt).from(element).save();
+  } catch (e) {
+    console.error('[PDF] Failed to generate PDF:', e);
+    throw new Error('Failed to generate PDF');
+  }
+}
+
 export function generateAllLayoutsHTML(
   shares: import('../types').SharePayload[],
   highlightColor: string,
   addresses: import('../types').DerivedAddress[] = [],
   prerender: boolean = true
 ): string {
-  // Generate HTML for all three layouts in a single document
-  const layouts: Array<import('./layouts').LayoutType> = ['full-page', '2-up', 'wallet-size'];
+  // Generate HTML for both layouts in a single document
+  const layouts: Array<import('./layouts').LayoutType> = ['full-page', '2-up'];
   const sections = layouts.map(layoutType => {
     const html = generatePrintHTML(shares, highlightColor, layoutType, addresses, prerender);
     // Extract body content
@@ -108,13 +131,6 @@ export function generateAllLayoutsHTML(
   .page > .card { flex: 1; display: flex; flex-direction: column; }
   .compact-page { gap: 10mm; justify-content: flex-start; }
   .compact-page > .card { flex: 0 0 auto; max-height: 45%; overflow: hidden; }
-  .wallet-page { height: 100vh; gap: 3em; justify-content: flex-start; }
-  .wallet-page > .card { flex: 0 0 auto; overflow: hidden; }
-  .wallet-page .card { border-width: 1.5px; box-shadow: none; }
-  .wallet-page .header { padding: 2px 6px; font-size: 8px; border-bottom-width: 1.5px; }
-  .wallet-page .header-title { font-size: 9px; }
-  .wallet-page .header-meta { font-size: 6px; }
-  .wallet-page .section { padding: 2px 6px; border-bottom-width: 1px; }
   .card { border: 3px solid #000; box-shadow: 4px 4px 0 #000; display: flex; flex-direction: column; width: 100%; overflow: hidden; }
   .header { padding: 6px 12px; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 3px solid #000; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .bottom-section { display: flex; flex-direction: row; gap: 12px; flex: 1; align-items: flex-start; }
