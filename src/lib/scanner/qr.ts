@@ -19,6 +19,7 @@ export class QRScanner {
   }
 
   async start(videoElement: HTMLVideoElement): Promise<void> {
+    console.log('[QRScanner] Starting camera, video element:', videoElement);
     this.config.onStatusChange?.('scanning');
 
     this.scanner = new QrScanner(
@@ -46,8 +47,20 @@ export class QRScanner {
     );
 
     try {
+      console.log('[QRScanner] Calling scanner.start()');
       await this.scanner.start();
+      console.log('[QRScanner] Camera started successfully');
+      console.log('[QRScanner] Video element srcObject:', videoElement.srcObject);
+      console.log('[QRScanner] Video element readyState:', videoElement.readyState);
+      console.log('[QRScanner] Video element paused:', videoElement.paused);
+
+      // Explicitly ensure video is playing (iOS Safari workaround)
+      if (videoElement.paused) {
+        console.log('[QRScanner] Video is paused, calling play()');
+        await videoElement.play().catch(err => console.log('[QRScanner] play() failed:', err));
+      }
     } catch (e) {
+      console.error('[QRScanner] Start failed:', e);
       this.scanner.destroy();
       this.scanner = null;
       this.config.onStatusChange?.('idle');
