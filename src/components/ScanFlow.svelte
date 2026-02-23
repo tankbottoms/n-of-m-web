@@ -200,8 +200,21 @@
     stopGuidanceTimer();
   }
 
-  async function extractSharesFromHTML(content: string): Promise<string[]> {
+  async function extractSharesFromHTML(content: string): Promise<{ shares: string[]; vault?: any }> {
     const shares: string[] = [];
+    let vaultData: any = null;
+
+    // Try to extract embedded vault JSON first
+    const vaultMatch = content.match(/<script[^>]*>.*?var\s+vaultData\s*=\s*({.*?});.*?<\/script>/s);
+    if (vaultMatch) {
+      try {
+        vaultData = JSON.parse(vaultMatch[1]);
+        console.log('[ScanFlow] Extracted vault data from HTML');
+      } catch (e) {
+        console.warn('[ScanFlow] Failed to parse vault data:', e);
+      }
+    }
+
     // Match QRious constructor calls with the value parameter
     // The value is typically a JSON-stringified object: value: '{"v":1,...}'
     const qriousMatches = content.matchAll(/value:\s*(['"])([^"']*?(?:\\.[^"']*?)*)\1/g);
@@ -223,7 +236,7 @@
         console.warn('[ScanFlow] Invalid share data in HTML:', e);
       }
     }
-    return shares;
+    return { shares, vault: vaultData };
   }
 
   async function handleFileUpload(e: Event) {
@@ -298,8 +311,49 @@
           }
           uploadStatus = null;
         }
+      } else if (file.type === 'application/json' || file.name.endsWith('.json')) {
+        // Handle JSON vault export
+        uploadStatus = 'Parsing JSON vault export...';
+
+        const animationInterval = setInterval(() => {
+          scanAnimationFrame = (scanAnimationFrame + 1) % 10;
+        }, 300); // 3+ fps
+
+        const content = await file.text();
+
+        try {
+          const vaultData = JSON.parse(content);
+          console.log('[ScanFlow] Parsed vault JSON:', { hasShares: !!vaultData.shares, hasMnemonic: !!vaultData.mnemonic });
+
+          clearInterval(animationInterval);
+          scanAnimationFrame = 0;
+
+          if (vaultData.mnemonic) {
+            // Direct mnemonic - auto-reconstruct
+            uploadStatus = 'Vault data loaded. Reconstructing...';
+            playConfirmBeep();
+            recoveredMnemonic = vaultData.mnemonic;
+            state = 'done';
+            await autoSaveToVault();
+          } else if (vaultData.shares && Array.isArray(vaultData.shares)) {
+            // Share data - process each share
+            uploadStatus = `Found ${vaultData.shares.length} shares in vault. Processing...`;
+            for (const share of vaultData.shares) {
+              playConfirmBeep();
+              handleScan(JSON.stringify(share));
+            }
+            uploadStatus = null;
+          } else {
+            error = 'Invalid JSON format - missing mnemonic or shares';
+            uploadStatus = null;
+          }
+        } catch (e) {
+          clearInterval(animationInterval);
+          error = 'Failed to parse JSON: ' + (e instanceof Error ? e.message : String(e));
+          uploadStatus = null;
+        }
       } else if (file.type === 'text/html' || file.name.endsWith('.html')) {
-        // Handle HTML exports
+        // Handle HTML exports (shares or complete vault)
         uploadStatus = 'Parsing HTML...';
 
         // Animate braille during HTML parsing
@@ -308,13 +362,20 @@
         }, 300); // 3+ fps
 
         const content = await file.text();
-        const shares = await extractSharesFromHTML(content);
+        const { shares, vault } = await extractSharesFromHTML(content);
 
         clearInterval(animationInterval);
         scanAnimationFrame = 0;
 
-        if (shares.length === 0) {
-          error = 'No share data found in HTML file';
+        if (vault && vault.mnemonic) {
+          // Complete vault data found
+          uploadStatus = 'Complete vault data found. Reconstructing...';
+          playConfirmBeep();
+          recoveredMnemonic = vault.mnemonic;
+          state = 'done';
+          await autoSaveToVault();
+        } else if (shares.length === 0) {
+          error = 'No share data or vault data found in HTML file';
           uploadStatus = null;
         } else {
           uploadStatus = `Found ${shares.length} share${shares.length !== 1 ? 's' : ''}. Processing...`;
@@ -345,6 +406,24 @@
             : 'No QR code found in image -- try a higher resolution screenshot';
           uploadStatus = null;
         } else {
+          // Try to process as vault QR code first
+          if (isVaultQR && results.length === 1) {
+            try {
+              const vaultData = JSON.parse(results[0]);
+              if (vaultData.mnemonic) {
+                uploadStatus = 'Vault data found. Reconstructing...';
+                playConfirmBeep();
+                recoveredMnemonic = vaultData.mnemonic;
+                state = 'done';
+                await autoSaveToVault();
+                return;
+              }
+            } catch (e) {
+              console.log('[ScanFlow] Not vault data, treating as share:', e);
+            }
+          }
+
+          // Process as shares
           uploadStatus = `Found ${results.length} QR code${results.length !== 1 ? 's' : ''}. Processing...`;
           for (const data of results) {
             playConfirmBeep();
@@ -500,7 +579,7 @@
         <button onclick={() => fileInput.click()} disabled={!!uploadStatus}>
           <i class="fa-thin fa-upload"></i> Upload Files
         </button>
-        <input bind:this={fileInput} type="file" accept="image/*,application/pdf,.html" onchange={handleFileUpload} style="display: none;" />
+        <input bind:this={fileInput} type="file" accept="image/*,application/pdf,.html,.json,application/json" onchange={handleFileUpload} style="display: none;" />
       </div>
 
       {#if uploadStatus}
