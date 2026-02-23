@@ -214,7 +214,7 @@
         let lastFoundCount = 0;
         const animationInterval = setInterval(() => {
           scanAnimationFrame = (scanAnimationFrame + 1) % 10;
-        }, 100);
+        }, 40); // Faster animation (25fps instead of 10fps)
 
         const results = await scanFromPDF(file, (current, total, found) => {
           const percent = Math.round((current / total) * 100);
@@ -222,6 +222,7 @@
 
           // Beep for each newly found QR code
           if (found > lastFoundCount) {
+            console.log(`[ScanFlow] QR code ${found} detected, playing beep`);
             playConfirmBeep();
             lastFoundCount = found;
           }
@@ -663,36 +664,48 @@
   .braille-progress-bar {
     position: relative;
     width: 100%;
-    height: 16px;
+    height: 18px;
     background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: 3px;
+    border: 2px solid var(--color-accent);
+    border-radius: 2px;
     overflow: hidden;
     margin-top: 0.5rem;
     font-size: 0.7rem;
     font-family: 'Courier New', monospace;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
   }
 
   .braille-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--color-accent), var(--color-success));
-    transition: width 0.2s ease-out;
+    background:
+      repeating-linear-gradient(
+        45deg,
+        #5C6BC0,
+        #5C6BC0 4px,
+        #7986CB 4px,
+        #7986CB 8px
+      );
+    image-rendering: pixelated;
+    transition: width 0.15s ease-out;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    padding-right: 4px;
+    padding-right: 6px;
     color: white;
     font-weight: bold;
+    font-size: 0.7rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 
   .progress-text {
     position: absolute;
-    right: 4px;
+    right: 6px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 0.65rem;
-    font-weight: 600;
-    color: var(--color-text);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #333;
     pointer-events: none;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
   }
 </style>
