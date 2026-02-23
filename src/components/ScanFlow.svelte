@@ -240,17 +240,38 @@
       scanAnimationFrame = 0;
       console.log(`[ScanFlow] Processing file: ${file.name}, type: ${file.type}, size: ${file.size}`);
 
+      // Start animation immediately for initial loading phase
+      const initialAnimationInterval = setInterval(() => {
+        scanAnimationFrame = (scanAnimationFrame + 1) % 10;
+      }, 300); // 3+ fps
+
+      // Stop after 100ms when actual processing begins (will be replaced by handler-specific animation)
+      setTimeout(() => clearInterval(initialAnimationInterval), 100);
+
       if (file.type === 'application/pdf') {
         let lastFoundCount = 0;
+        let lastProgressUpdate = Date.now();
 
-        // Start animation that runs continuously during PDF scanning
+        // Start animation that runs continuously during PDF scanning (3+ fps)
         const animationInterval = setInterval(() => {
           scanAnimationFrame = (scanAnimationFrame + 1) % 10;
-        }, 50); // Animate every 50ms for smooth spinning
+        }, 300); // Update every 300ms = 3.3 fps minimum
+
+        // Fallback progress update every 1 second if no PDF callback
+        const progressInterval = setInterval(() => {
+          if (uploadStatus && !uploadStatus.includes('Processing')) {
+            // Keep status visible, add a dot to show activity
+            const dots = ['.', '..', '...', ''][Math.floor((Date.now() / 300) % 4)];
+            if (!uploadStatus.includes(dots.slice(-1))) {
+              uploadStatus = uploadStatus.replace(/\.{0,3}$/, dots);
+            }
+          }
+        }, 1000); // Update progress text every 1 second
 
         const results = await scanFromPDF(file, (current, total, found) => {
           const percent = Math.round((current / total) * 100);
           scanProgress = percent;
+          lastProgressUpdate = Date.now();
 
           // Beep for each newly found QR code
           if (found > lastFoundCount) {
@@ -263,6 +284,7 @@
         });
 
         clearInterval(animationInterval);
+        clearInterval(progressInterval);
         scanProgress = 0;
         scanAnimationFrame = 0;
 
@@ -279,8 +301,17 @@
       } else if (file.type === 'text/html' || file.name.endsWith('.html')) {
         // Handle HTML exports
         uploadStatus = 'Parsing HTML...';
+
+        // Animate braille during HTML parsing
+        const animationInterval = setInterval(() => {
+          scanAnimationFrame = (scanAnimationFrame + 1) % 10;
+        }, 300); // 3+ fps
+
         const content = await file.text();
         const shares = await extractSharesFromHTML(content);
+
+        clearInterval(animationInterval);
+        scanAnimationFrame = 0;
 
         if (shares.length === 0) {
           error = 'No share data found in HTML file';
@@ -297,7 +328,17 @@
         const isVaultQR = file.name.includes('vault-qr') || file.type.startsWith('image/');
         uploadStatus = isVaultQR ? `Scanning vault QR code...` : `Scanning image...`;
         console.log(`[ScanFlow] Scanning ${isVaultQR ? 'vault QR' : 'image'} file`);
+
+        // Animate braille during image scanning
+        const animationInterval = setInterval(() => {
+          scanAnimationFrame = (scanAnimationFrame + 1) % 10;
+        }, 300); // 3+ fps
+
         const results = await scanFromFile(file);
+
+        clearInterval(animationInterval);
+        scanAnimationFrame = 0;
+
         if (results.length === 0) {
           error = isVaultQR
             ? 'No vault QR code found -- ensure image is clear and well-lit'
