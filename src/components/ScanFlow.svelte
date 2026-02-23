@@ -293,8 +293,8 @@
         </div>
       {/if}
 
-      <div class="camera-area">
-        <video bind:this={videoEl} class="camera-video" class:hidden={!cameraActive} playsinline autoplay muted></video>
+      <div class="camera-area" class:inactive={!cameraActive}>
+        <video bind:this={videoEl} class="camera-video" playsinline autoplay muted></video>
 
         {#if cameraActive}
           <div class="scan-overlay" class:detected={scanStatus === 'detected'}>
@@ -418,14 +418,13 @@
     box-shadow: 2px 2px 0px var(--color-shadow);
     overflow: hidden;
   }
-  .camera-video {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover;
-    opacity: 1 !important;
-  }
-  .camera-video.hidden {
+  .camera-area.inactive {
     display: none;
+  }
+  .camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
   .camera-placeholder {
     position: absolute;
