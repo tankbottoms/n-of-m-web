@@ -419,9 +419,10 @@
     overflow: hidden;
   }
   .camera-video {
-    width: 100%;
-    height: 100%;
+    width: 100% !important;
+    height: 100% !important;
     object-fit: cover;
+    opacity: 1 !important;
   }
   .camera-video.hidden {
     display: none;
