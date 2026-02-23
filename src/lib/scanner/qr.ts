@@ -77,6 +77,13 @@ export class QRScanner {
         await videoElement.play().catch(err => console.log('[QRScanner] play() failed:', err));
       }
 
+      // Make video element visible by overriding qr-scanner's inline hiding styles
+      // This is more efficient than canvas rendering
+      videoElement.style.opacity = '1';
+      videoElement.style.width = '100%';
+      videoElement.style.height = '100%';
+      console.log('[QRScanner] Video element made visible for display');
+
       // Start fallback canvas-based scanning (helps with Safari compatibility issues)
       console.log('[QRScanner] Starting fallback canvas scanning as backup...');
       this.startFallbackCanvasScanning(videoElement);
@@ -93,33 +100,15 @@ export class QRScanner {
 
   private startFallbackCanvasScanning(videoElement: HTMLVideoElement): void {
     // Fallback for when qr-scanner's zxing doesn't detect codes
-    // Optimized: cache context, only update dimensions when needed, efficient scanning
-    const displayCanvas = this.config.displayCanvas;
-    let displayCtx: CanvasRenderingContext2D | null = null;
-    let lastWidth = 0;
-    let lastHeight = 0;
+    // Lightweight: only scan for QR codes, don't render display (video element handles that)
     let lastScanTime = 0;
-    const SCAN_INTERVAL = 150; // Scan every 150ms for QR codes
+    const SCAN_INTERVAL = 200; // Scan every 200ms for QR codes
 
     this.fallbackInterval = setInterval(() => {
+      this.fallbackFrameCount++;
+
       try {
-        // Render to display canvas with dimension caching
-        if (displayCanvas && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
-          // Only reset context if dimensions changed
-          if (lastWidth !== videoElement.videoWidth || lastHeight !== videoElement.videoHeight) {
-            displayCanvas.width = videoElement.videoWidth;
-            displayCanvas.height = videoElement.videoHeight;
-            lastWidth = videoElement.videoWidth;
-            lastHeight = videoElement.videoHeight;
-            displayCtx = displayCanvas.getContext('2d');
-          }
-
-          if (displayCtx) {
-            displayCtx.drawImage(videoElement, 0, 0);
-          }
-        }
-
-        // Scan for QR codes periodically
+        // Scan for QR codes at intervals
         const now = Date.now();
         if (now - lastScanTime >= SCAN_INTERVAL) {
           lastScanTime = now;
@@ -135,7 +124,7 @@ export class QRScanner {
 
           for (const code of codes) {
             if (code && !this.cooldown) {
-              console.log('[QRScanner] Detected QR code');
+              console.log('[QRScanner] Fallback scanner detected QR code');
               this.cooldown = true;
               this.config.onStatusChange?.('detected');
               const accepted = this.config.onScan(code);
@@ -149,7 +138,7 @@ export class QRScanner {
       } catch (e) {
         // Silent - canvas may not be available in background
       }
-    }, 40); // Run every 40ms (~25 fps target)
+    }, 100); // Check every 100ms
   }
 
   stop(): void {
