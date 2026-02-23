@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import type { SecretRecord, PathType, ShareSet, SharePayload } from '$lib/types';
   import { getAllSecrets, deleteSecret, updateSecret, hasVaultPassword, verifyVaultPassword, saveSecret } from '$lib/storage';
-  import { generatePrintHTML, printCards, downloadHTML, datetimeStamp, ensureQRious } from '$lib/pdf';
+  import { generatePrintHTML, printCards, downloadHTML, datetimeStamp, ensureQRious, generateAllLayoutsHTML } from '$lib/pdf';
   import type { LayoutType } from '$lib/pdf';
   import { split } from '$lib/shamir';
   import { deriveAddresses } from '$lib/wallet';
@@ -323,6 +323,50 @@
       await new Promise(resolve => setTimeout(resolve, 200));
     }
 
+    exportId = null;
+  }
+
+  async function exportAllLayoutsCombined(secret: SecretRecord) {
+    await ensureQRious();
+    const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
+    const timestamp = datetimeStamp();
+    const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+    const html = generateAllLayoutsHTML(shares, '#A8D8EA', secret.addresses.slice(0, 5));
+    downloadHTML(html, `${safeName}-shares-all-layouts-${timestamp}.html`);
+    exportId = null;
+  }
+
+  async function exportVaultQRCode(secret: SecretRecord) {
+    await ensureQRious();
+    const timestamp = datetimeStamp();
+    const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+    const exportData = {
+      name: secret.name,
+      createdAt: new Date(secret.createdAt).toISOString(),
+      mnemonic: secret.mnemonic,
+      wordCount: secret.wordCount,
+      derivationPath: secret.derivationPath,
+      pathType: secret.pathType,
+      addressCount: secret.addressCount,
+      addresses: secret.addresses.map(a => ({ index: a.index, address: a.address })),
+      shamirConfig: secret.shamirConfig,
+      hasPassphrase: secret.hasPassphrase,
+      hasPIN: secret.hasPIN,
+    };
+    const json = JSON.stringify(exportData);
+    const canvas = document.createElement('canvas');
+    new (window as any).QRious({ element: canvas, value: json, size: 1024, level: 'L', padding: 16 });
+    canvas.toBlob((blob: Blob | null) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${safeName}-vault-qr-${timestamp}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
     exportId = null;
   }
 
@@ -695,8 +739,18 @@
                       </button>
                       <button class="export-option" onclick={() => exportAllPDFs(secret)}>
                         <i class="fa-thin fa-download"></i>
-                        <span class="export-option-label">All Layouts</span>
-                        <span class="export-option-desc text-xs text-muted">Download full, compact, and wallet layouts at once</span>
+                        <span class="export-option-label">All Layouts (HTML)</span>
+                        <span class="export-option-desc text-xs text-muted">Download full, compact, and wallet as separate HTML files</span>
+                      </button>
+                      <button class="export-option" onclick={() => exportAllLayoutsCombined(secret)}>
+                        <i class="fa-thin fa-file"></i>
+                        <span class="export-option-label">Combined HTML</span>
+                        <span class="export-option-desc text-xs text-muted">All three layouts in one printable HTML document</span>
+                      </button>
+                      <button class="export-option" onclick={() => exportVaultQRCode(secret)}>
+                        <i class="fa-thin fa-image"></i>
+                        <span class="export-option-label">Vault QR Code</span>
+                        <span class="export-option-desc text-xs text-muted">Full secret data as single QR code PNG</span>
                       </button>
                     </div>
                     <div class="popup-actions mt-md">

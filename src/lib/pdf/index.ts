@@ -79,3 +79,58 @@ export function downloadHTML(html: string, filename: string): void {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export function generateAllLayoutsHTML(
+  shares: import('../types').SharePayload[],
+  highlightColor: string,
+  addresses: import('../types').DerivedAddress[] = [],
+  prerender: boolean = true
+): string {
+  // Generate HTML for all three layouts in a single document
+  const layouts: Array<import('./layouts').LayoutType> = ['full-page', '2-up', 'wallet-size'];
+  const sections = layouts.map(layoutType => {
+    const html = generatePrintHTML(shares, highlightColor, layoutType, addresses, prerender);
+    // Extract body content
+    const bodyMatch = html.match(/<body>([\s\S]*)<\/body>/);
+    return bodyMatch ? bodyMatch[1] : '';
+  });
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 10mm; size: portrait; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Courier New', monospace; color: #000; font-size: 11px; line-height: 1.4; }
+  .page { page-break-after: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; }
+  .page:last-child { page-break-after: auto; }
+  .page > .card { flex: 1; display: flex; flex-direction: column; }
+  .compact-page { gap: 10mm; justify-content: flex-start; }
+  .compact-page > .card { flex: 0 0 auto; max-height: 45%; overflow: hidden; }
+  .wallet-page { height: 100vh; gap: 3em; justify-content: flex-start; }
+  .wallet-page > .card { flex: 0 0 auto; overflow: hidden; }
+  .wallet-page .card { border-width: 1.5px; box-shadow: none; }
+  .wallet-page .header { padding: 2px 6px; font-size: 8px; border-bottom-width: 1.5px; }
+  .wallet-page .header-title { font-size: 9px; }
+  .wallet-page .header-meta { font-size: 6px; }
+  .wallet-page .section { padding: 2px 6px; border-bottom-width: 1px; }
+  .card { border: 3px solid #000; box-shadow: 4px 4px 0 #000; display: flex; flex-direction: column; width: 100%; overflow: hidden; }
+  .header { padding: 6px 12px; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 3px solid #000; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .bottom-section { display: flex; flex-direction: row; gap: 12px; flex: 1; align-items: flex-start; }
+  .share-qr { border: 2px solid #000; padding: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .share-qr canvas { display: block; }
+  .share-qr img { display: block; image-rendering: pixelated; }
+  .footer { padding: 6px 12px; border-top: 3px solid #000; background: #f5f5f5; flex-shrink: 0; }
+  @media screen {
+    body { background: #f0f0f0; padding: 2em 0; }
+    .page { page-break-after: auto; min-height: auto; width: 50%; margin: 0 auto; gap: 2em; }
+    .page > .card { flex: none; box-shadow: 6px 6px 0 rgba(0,0,0,0.2); margin-bottom: 2em; }
+  }
+</style>
+</head>
+<body>
+${sections.join('\n')}
+</body>
+</html>`;
+}
