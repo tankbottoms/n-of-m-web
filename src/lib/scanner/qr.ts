@@ -93,56 +93,69 @@ export class QRScanner {
 
   private startFallbackCanvasScanning(videoElement: HTMLVideoElement): void {
     // Fallback for when qr-scanner's zxing doesn't detect codes
-    // This periodically captures video frames and scans them with jsQR
-    // Frame skipping: process every 20 frames at 100ms intervals = ~2 fps
-    // This reduces CPU usage by 40-50% while maintaining responsiveness
+    // Uses requestAnimationFrame for smooth display + periodic QR scanning
     const displayCanvas = this.config.displayCanvas;
+    let scanCanvas: HTMLCanvasElement | null = null;
+    let scanCtx: CanvasRenderingContext2D | null = null;
+    let lastScanTime = 0;
+    const SCAN_INTERVAL = 200; // Scan every 200ms (~5 fps) for QR detection
 
-    this.fallbackInterval = setInterval(() => {
-      this.fallbackFrameCount++;
-      // Always draw to display canvas for visual feedback (smooth ~10 fps)
-      // But only scan for QR codes every 20 frames (~2 fps) to save CPU
+    const renderFrame = () => {
+      if (!this.fallbackInterval) return; // Stop if scanner was stopped
 
       try {
-        const canvas = document.createElement('canvas');
-        canvas.width = videoElement.videoWidth || 640;
-        canvas.height = videoElement.videoHeight || 480;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        ctx.drawImage(videoElement, 0, 0);
-
-        // Always render to display canvas for smooth visual feedback
-        if (displayCanvas) {
-          displayCanvas.width = canvas.width;
-          displayCanvas.height = canvas.height;
+        // Render to display canvas for smooth visual feedback (native ~30-60 fps)
+        if (displayCanvas && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+          displayCanvas.width = videoElement.videoWidth;
+          displayCanvas.height = videoElement.videoHeight;
           const displayCtx = displayCanvas.getContext('2d');
           if (displayCtx) {
-            displayCtx.drawImage(canvas, 0, 0);
+            displayCtx.drawImage(videoElement, 0, 0);
           }
         }
 
-        // Only scan for QR codes every 20 frames to reduce CPU usage
-        if (this.fallbackFrameCount % 20 !== 0) return;
+        // Scan for QR codes at reduced frequency to save CPU
+        const now = Date.now();
+        if (now - lastScanTime >= SCAN_INTERVAL) {
+          lastScanTime = now;
 
-        const codes = scanAllQRCodes(canvas, ctx);
+          // Create or reuse scan canvas
+          if (!scanCanvas) {
+            scanCanvas = document.createElement('canvas');
+          }
+          scanCanvas.width = videoElement.videoWidth || 640;
+          scanCanvas.height = videoElement.videoHeight || 480;
+          scanCtx = scanCanvas.getContext('2d');
+          if (!scanCtx) return;
 
-        for (const code of codes) {
-          if (code && !this.cooldown) {
-            console.log('[QRScanner] Fallback canvas scan detected:', code);
-            this.cooldown = true;
-            this.config.onStatusChange?.('detected');
-            const accepted = this.config.onScan(code);
-            setTimeout(() => {
-              this.cooldown = false;
-              this.config.onStatusChange?.('scanning');
-            }, accepted ? 1500 : 500);
+          scanCtx.drawImage(videoElement, 0, 0);
+          const codes = scanAllQRCodes(scanCanvas, scanCtx);
+
+          for (const code of codes) {
+            if (code && !this.cooldown) {
+              console.log('[QRScanner] Fallback canvas scan detected:', code);
+              this.cooldown = true;
+              this.config.onStatusChange?.('detected');
+              const accepted = this.config.onScan(code);
+              setTimeout(() => {
+                this.cooldown = false;
+                this.config.onStatusChange?.('scanning');
+              }, accepted ? 1500 : 500);
+            }
           }
         }
       } catch (e) {
         // Silent - canvas may not be available in background
       }
-    }, 100); // Check every 100ms
+
+      requestAnimationFrame(renderFrame);
+    };
+
+    // Start the animation loop
+    this.fallbackInterval = setInterval(() => {
+      // Keep interval reference for stop() to work
+    }, 100);
+    requestAnimationFrame(renderFrame);
   }
 
   stop(): void {
