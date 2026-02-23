@@ -303,6 +303,29 @@
     exportId = null;
   }
 
+  async function exportAllPDFs(secret: SecretRecord) {
+    await ensureQRious();
+    const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
+    const timestamp = datetimeStamp();
+    const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+    // Download all three layouts with sequential names
+    const layouts = [
+      { type: 'full-page' as const, label: 'full' },
+      { type: '2-up' as const, label: 'compact' },
+      { type: 'wallet-size' as const, label: 'wallet' }
+    ];
+
+    for (const layout of layouts) {
+      const html = generatePrintHTML(shares, '#A8D8EA', layout.type, secret.addresses.slice(0, 5));
+      downloadHTML(html, `${safeName}-shares-${layout.label}-${timestamp}.html`);
+      // Small delay between downloads to avoid browser throttling
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    exportId = null;
+  }
+
   async function exportAsQRImage(secret: SecretRecord) {
     await ensureQRious();
     const exportData = {
@@ -667,8 +690,13 @@
                       </button>
                       <button class="export-option" onclick={() => exportAsQR(secret)}>
                         <i class="fa-thin fa-print"></i>
-                        <span class="export-option-label">Share Cards</span>
-                        <span class="export-option-desc text-xs text-muted">Shamir share cards ({secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares}) as printable HTML</span>
+                        <span class="export-option-label">Share Cards (Full)</span>
+                        <span class="export-option-desc text-xs text-muted">Full-page layout ({secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares})</span>
+                      </button>
+                      <button class="export-option" onclick={() => exportAllPDFs(secret)}>
+                        <i class="fa-thin fa-download"></i>
+                        <span class="export-option-label">All Layouts</span>
+                        <span class="export-option-desc text-xs text-muted">Download full, compact, and wallet layouts at once</span>
                       </button>
                     </div>
                     <div class="popup-actions mt-md">
