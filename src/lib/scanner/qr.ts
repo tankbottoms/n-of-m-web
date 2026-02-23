@@ -100,9 +100,9 @@ export class QRScanner {
 
   private startFallbackCanvasScanning(videoElement: HTMLVideoElement): void {
     // Fallback for when qr-scanner's zxing doesn't detect codes
-    // Lightweight: only scan for QR codes, don't render display (video element handles that)
+    // Scans video frames for QR codes using canvas
     let lastScanTime = 0;
-    const SCAN_INTERVAL = 200; // Scan every 200ms for QR codes
+    const SCAN_INTERVAL = 150; // Scan every 150ms for reliable detection
 
     this.fallbackInterval = setInterval(() => {
       this.fallbackFrameCount++;
@@ -110,12 +110,12 @@ export class QRScanner {
       try {
         // Scan for QR codes at intervals
         const now = Date.now();
-        if (now - lastScanTime >= SCAN_INTERVAL) {
+        if (now - lastScanTime >= SCAN_INTERVAL && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
           lastScanTime = now;
 
           const scanCanvas = document.createElement('canvas');
-          scanCanvas.width = videoElement.videoWidth || 640;
-          scanCanvas.height = videoElement.videoHeight || 480;
+          scanCanvas.width = videoElement.videoWidth;
+          scanCanvas.height = videoElement.videoHeight;
           const scanCtx = scanCanvas.getContext('2d');
           if (!scanCtx) return;
 
@@ -124,7 +124,7 @@ export class QRScanner {
 
           for (const code of codes) {
             if (code && !this.cooldown) {
-              console.log('[QRScanner] Fallback scanner detected QR code');
+              console.log('[QRScanner] Canvas fallback detected QR code');
               this.cooldown = true;
               this.config.onStatusChange?.('detected');
               const accepted = this.config.onScan(code);
@@ -138,7 +138,7 @@ export class QRScanner {
       } catch (e) {
         // Silent - canvas may not be available in background
       }
-    }, 100); // Check every 100ms
+    }, 60); // Check frequently for reliable detection
   }
 
   stop(): void {
