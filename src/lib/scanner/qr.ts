@@ -116,7 +116,7 @@ export class QRScanner {
         if (displayCanvas) {
           displayCanvas.width = videoWidth;
           displayCanvas.height = videoHeight;
-          const ctx = displayCanvas.getContext('2d');
+          const ctx = displayCanvas.getContext('2d', { willReadFrequently: true });
           if (ctx) {
             try {
               ctx.drawImage(videoElement, 0, 0);
@@ -134,7 +134,7 @@ export class QRScanner {
           const canvas = document.createElement('canvas');
           canvas.width = videoWidth;
           canvas.height = videoHeight;
-          const ctx = canvas.getContext('2d');
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (!ctx) return;
 
           try {
