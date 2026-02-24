@@ -166,6 +166,9 @@
       margin-bottom: 0.5rem;
       font-weight: 600;
     }
+    .addr-table td:nth-child(2) {
+      padding-left: 2em !important;
+    }
     .addr-table .actions {
       margin-top: 0.5rem;
       padding-top: 0.5rem;
