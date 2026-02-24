@@ -1,31 +1,47 @@
 # n-of-m TODO
 
-## Immediate: PDF Layout Polish
-
-Before any monetization or feature work, lock down the print layouts:
+## Layout Standardization - COMPLETED ✓
 
 - [x] Full-page layout: QR fills container, 1 card/page, all 10 addresses, notes section
-- [x] 2-up layout: 2 cards/page, 5 addresses each, condensed instructions
-- [x] Wallet-size layout: 4 cards/page with wallet-specific CSS overrides (compact padding/fonts/borders)
-- [x] QR code sizing: inline style with explicit pixel dimensions, image-rendering: pixelated
-- [x] Vault save toast: top-center slide-in with fade-out animation (replaced jumping popup)
-- [x] Default derivation addresses: increased from 5 to 10
+- [x] Removed 2-up layout: Simplified to single full-page standard
+- [x] Removed wallet-size layout: Focuses on full-page export
+- [x] QR code sizing: Reduced to 168px (80% of card width) for optimal scannability
+- [x] Vault save toast: Top-center slide-in with fade-out animation
+- [x] Default derivation addresses: All addresses included (not truncated)
+- [x] Export formats: HTML, PDF, Vault Backup HTML with instructions
+- [x] QR code consistency: All shares export with same format and address list
 - [ ] Test print from Safari, Chrome, Firefox -- check margins, page breaks
 - [ ] Verify downloaded HTML renders identically to print preview
-- [ ] Standalone HTML (`n-of-m-standalone.html`) opens and functions offline
 - [ ] Screen preview spacing/sizing looks correct at all viewport widths
-- [ ] Verify QR scannability at all sizes (full 280px, compact 160px, wallet 100px) with error correction H
 
-## Session Review Tasks
+## Vault Backup Export - COMPLETED ✓
 
-Items to verify in next session:
+Vault backup formatting and documentation:
 
-- [ ] Wallet layout: confirm 4 cards fit without overflow when printing from real browser (not just Playwright PDF)
-- [ ] Compact layout: verify 2-up cards don't clip at bottom on letter paper vs A4
-- [ ] Toast animation: verify save-to-vault toast appears at top center and fades smoothly (no jumping)
-- [ ] Service worker: clear caches and verify new code loads without stale SW interference
-- [ ] Print dialog: test File > Print from Chrome/Safari matches downloaded HTML output
-- [ ] Address display: verify full-page shows 10, compact shows 5, wallet shows 3 addresses
+- [x] Vault Backup HTML with formatted layout
+- [x] Embedded pre-rendered QR code with data URL
+- [x] Security warnings and usage instructions
+- [x] Complete seed phrase and address information
+- [x] Date/time stamps (created and exported)
+- [x] Print-optimized CSS and formatting
+- [x] Clear labeling distinguishing from share cards
+- [x] Error handling for scan attempts on vault QR
+
+---
+
+## Session Review Tasks - v0.3.2
+
+Items to verify after latest export changes:
+
+- [ ] Vault Backup HTML: Verify formatting is print-friendly with proper page breaks
+- [ ] Vault Backup QR: Confirm QR code scans correctly and contains all vault data
+- [ ] Share Card HTML: Verify pre-rendered PNG QR codes display correctly in browser
+- [ ] Share Card PDF: Confirm PDF layout matches HTML export exactly
+- [ ] Export Options: Verify all three export formats appear in export popup
+- [ ] Scanner Error: Test that vault QR shows helpful error message when scanned
+- [ ] Print Dialog: Test File > Print from Chrome/Safari/Firefox matches downloaded HTML
+- [ ] Cross-Browser: Verify exports render identically in Safari, Chrome, Firefox
+- [ ] Service Worker: Clear caches and verify new code loads without stale SW interference
 
 ---
 

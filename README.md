@@ -12,11 +12,32 @@ Shamir's Secret Sharing for Seed Phrases. Split. Print. Recover.
 
 - **Generate** - Create 12/15/18/21/24-word seed phrases with system CSPRNG or mouse entropy
 - **Split** - Shamir's Secret Sharing over GF(2^8), configurable threshold and total shares
-- **Print** - Full page, compact (2-up), or wallet-size (4-up) PDF layouts with QR codes
-- **Scan** - Camera or file-based QR scanning to reconstruct secrets
+- **Print** - Full-page layout with 80% QR code size optimized for scannability
+- **Export** - Multiple formats: HTML, PDF, and Vault Backup (HTML with embedded QR)
+- **Scan** - Camera or file-based QR scanning with jsQR fallback for reliability
 - **Vault** - AES-256-GCM encrypted IndexedDB storage with optional password protection
 - **Derive** - BIP44 HD wallet address derivation (MetaMask, Ledger, custom paths)
 - **Offline** - Fully client-side SPA, no server, no API calls
+
+## Export Formats
+
+### Share Cards
+- **HTML**: Printable full-page cards with embedded QR codes (pre-rendered for offline use)
+- **PDF**: Professional PDF documents with full-page layout, optimized for printing
+- **Use**: Scan individual share cards during recovery to reconstruct your secret
+
+### Vault Backup
+- **Vault Backup HTML**: Complete backup document with embedded QR code, instructions, and security warnings
+- **Contains**: Full seed phrase, all addresses, configuration, derivation path
+- **Use**: Store separately from share cards as an additional backup layer
+- **Note**: Cannot be scanned by share card scanner - use individual share cards for recovery
+
+### Features
+- All addresses included (not truncated)
+- Date/time stamps on all exports
+- Print-optimized CSS and formatting
+- Security information and usage instructions
+- QR codes at 168px (80% of card width) for optimal scannability
 
 ## Cryptography
 

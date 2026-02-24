@@ -15,6 +15,15 @@
   import AddressTable from './AddressTable.svelte';
   import PinInput from './PinInput.svelte';
 
+  function escapeHTML(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   let secrets = $state<SecretRecord[]>([]);
   let expandedId = $state<string | null>(null);
   let loading = $state(true);
@@ -334,15 +343,118 @@
     const json = JSON.stringify(exportData);
     const canvas = document.createElement('canvas');
     new (window as any).QRious({ element: canvas, value: json, size: 1024, level: 'L', padding: 16 });
-    canvas.toBlob((blob: Blob | null) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-${datetimeStamp()}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }, 'image/png');
+    const qrDataURL = canvas.toDataURL('image/png');
+
+    // Create formatted document with instructions
+    const createdDate = new Date(secret.createdAt).toISOString().replace('T', ' ').slice(0, 16);
+    const exportDate = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    const typeName = secret.pathType === 'metamask' ? 'MetaMask' : secret.pathType === 'ledger' ? 'Ledger' : 'Custom';
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: 'Courier New', monospace; color: #000; background: #fff; margin: 0; padding: 2cm; }
+  .vault-backup { width: 100%; max-width: 800px; margin: 0 auto; }
+  .header { border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 20px; }
+  .title { font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+  .subtitle { font-size: 10px; color: #666; margin-top: 4px; }
+  .section { margin-bottom: 20px; }
+  .section-label { font-weight: bold; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 8px; }
+  .content { font-size: 11px; line-height: 1.5; }
+  .info-grid { display: grid; grid-template-columns: 150px 1fr; gap: 12px 24px; font-size: 10px; }
+  .info-label { font-weight: bold; color: #666; }
+  .qr-container { text-align: center; margin: 20px 0; padding: 20px; border: 2px solid #000; background: #f9f9f9; }
+  .qr-container img { max-width: 100%; height: auto; image-rendering: pixelated; }
+  .warning { border: 2px solid #ff6b6b; padding: 12px; background: #fff0f0; margin-top: 20px; font-size: 10px; line-height: 1.5; }
+  .warning-title { font-weight: bold; margin-bottom: 8px; color: #ff0000; }
+  .footer { margin-top: 30px; border-top: 2px solid #000; padding-top: 12px; font-size: 9px; color: #666; }
+  @page { margin: 2cm; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+<div class="vault-backup">
+  <div class="header">
+    <div class="title">Vault Backup</div>
+    <div class="subtitle">Complete seed phrase and configuration</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">What This QR Code Contains</div>
+    <div class="content">
+      <p>This QR code is a complete backup of your vault. It contains:</p>
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li>${secret.wordCount}-word seed phrase</li>
+        <li>All ${secret.addressCount} derived wallet addresses</li>
+        <li>Configuration: ${secret.hasPIN ? 'PIN protected, ' : ''}${secret.hasPassphrase ? 'Passphrase' : 'No passphrase'}</li>
+        <li>Derivation path: <code>${escapeHTML(secret.derivationPath)}</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">How to Use</div>
+    <div class="content">
+      <ol style="margin: 8px 0; padding-left: 20px;">
+        <li>Keep this file secure. Store it separately from your share cards.</li>
+        <li>To restore: Use the n-of-m app scanner or upload this file during recovery.</li>
+        <li>If vault password is set, you will be prompted to enter it during import.</li>
+        <li>This backup is <strong>not scannable</strong> by the share card scanner. Use individual share cards for recovery.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Details</div>
+    <div class="info-grid">
+      <div class="info-label">Vault Name:</div>
+      <div>${escapeHTML(secret.name)}</div>
+      <div class="info-label">Created:</div>
+      <div>${createdDate}</div>
+      <div class="info-label">Exported:</div>
+      <div>${exportDate}</div>
+      <div class="info-label">Word Count:</div>
+      <div>${secret.wordCount} words</div>
+      <div class="info-label">Addresses:</div>
+      <div>${secret.addressCount} addresses</div>
+      <div class="info-label">Type:</div>
+      <div>${typeName}</div>
+    </div>
+  </div>
+
+  <div class="qr-container">
+    <img src="${qrDataURL}" alt="Vault backup QR code" style="max-width: 100%; height: auto; image-rendering: pixelated;" />
+    <p style="font-size: 9px; color: #666; margin-top: 8px;">Scan or photograph for backup</p>
+  </div>
+
+  <div class="warning">
+    <div class="warning-title">⚠ Important Security Notice</div>
+    <p style="margin: 0;">
+      This backup contains your complete seed phrase and is as sensitive as the original mnemonic.
+      Do not share or upload this file to the cloud unless encrypted. Keep it physically secure,
+      separate from your Shamir share cards. If someone gains access to this file and your vault
+      password, they can steal your crypto assets.
+    </p>
+  </div>
+
+  <div class="footer">
+    <p style="margin: 0;">Generated by n-of-m vault backup system • Keep secure • Generated on ${exportDate}</p>
+  </div>
+</div>
+</body>
+</html>`;
+
+    // Download as HTML file
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-vault-backup-${datetimeStamp()}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
     exportId = null;
   }
 
@@ -671,8 +783,8 @@
                       </button>
                       <button class="export-option" onclick={() => exportAsQRImage(secret)}>
                         <i class="fa-thin fa-qrcode"></i>
-                        <span class="export-option-label">Vault QR Code PNG</span>
-                        <span class="export-option-desc text-xs text-muted">Complete vault backup as PNG QR code (cannot be imported via scanner)</span>
+                        <span class="export-option-label">Vault Backup HTML</span>
+                        <span class="export-option-desc text-xs text-muted">Complete seed phrase backup with QR code, instructions, and security info</span>
                       </button>
                     </div>
                     <div class="popup-actions mt-md">
