@@ -56,6 +56,7 @@
 
   // Export popup state
   let exportId = $state<string | null>(null);
+  let exportFormatJSON = $state(false);
   let exportPassword = $state('');
   let exportPasswordConfirm = $state('');
   let exportPasswordError = $state('');
@@ -741,9 +742,9 @@ var vaultData = ${JSON.stringify(exportData)};
 
               <!-- Export popup -->
               {#if exportId === secret.id}
-                <button class="popup-overlay" onclick={() => { exportId = null; exportPassword = ''; exportPasswordConfirm = ''; exportPasswordError = ''; }} aria-label="Close popup"></button>
+                <button class="popup-overlay" onclick={() => { exportId = null; exportFormatJSON = false; exportPassword = ''; exportPasswordConfirm = ''; exportPasswordError = ''; }} aria-label="Close popup"></button>
                 <div class="popup-card export-popup">
-                  {#if exportPassword !== ''}
+                  {#if exportFormatJSON}
                     <!-- JSON Password Dialog -->
                     <h4 class="text-xs text-muted mb-sm">SET EXPORT PASSWORD</h4>
                     <p class="text-xs text-muted mb-md">This password will encrypt your seed phrase. Keep it safe.</p>
@@ -752,6 +753,7 @@ var vaultData = ${JSON.stringify(exportData)};
                       bind:value={exportPassword}
                       placeholder="Export password (min 8 chars)"
                       style="width: 100%; margin-bottom: 0.5rem;"
+                      autofocus
                     />
                     <input
                       type="password"
@@ -763,14 +765,14 @@ var vaultData = ${JSON.stringify(exportData)};
                       <p class="text-xs mt-sm" style="color: var(--color-error);">{exportPasswordError}</p>
                     {/if}
                     <div class="popup-actions mt-md">
-                      <button onclick={() => { exportPassword = ''; exportPasswordConfirm = ''; exportPasswordError = ''; }}>Back</button>
+                      <button onclick={() => { exportFormatJSON = false; exportPassword = ''; exportPasswordConfirm = ''; exportPasswordError = ''; }}>Back</button>
                       <button class="primary" onclick={() => exportAsJSON(secret)}>Export</button>
                     </div>
                   {:else}
                     <!-- Format Selection -->
                     <h4 class="text-xs text-muted mb-md">EXPORT FORMAT</h4>
                     <div class="export-options">
-                      <button class="export-option" onclick={() => { exportPassword = ' '; }}>
+                      <button class="export-option" onclick={() => { exportFormatJSON = true; exportPassword = ''; exportPasswordConfirm = ''; exportPasswordError = ''; }}>
                         <div class="export-option-icon">
                           <i class="fa-thin fa-file-code"></i>
                         </div>
