@@ -18,6 +18,7 @@ export class QRScanner {
   private lastErrorLogTime = 0;
   private fallbackInterval: ReturnType<typeof setInterval> | null = null;
   private fallbackFrameCount = 0;
+  private displayFrameId: ReturnType<typeof requestAnimationFrame> | null = null;
 
   constructor(config: ScannerConfig) {
     this.config = config;
@@ -81,11 +82,15 @@ export class QRScanner {
       // qr-scanner uses zxing library which runs in Web Worker for efficient detection
       console.log('[QRScanner] Relying on qr-scanner library for QR detection (maxScansPerSecond: 10)');
 
-      // DISABLED: Fallback canvas-based scanning was causing severe performance degradation
-      // The scanAllQRCodes() function with multi-granularity tiled scanning is too expensive
-      // to run every 500ms on real-time video. It caused 5-10 second frame delays.
-      // The main qr-scanner library with zxing is sufficient for most use cases.
-      // If Safari-specific issues arise, can be re-enabled with reduced frequency (e.g., 5 second intervals)
+      // Start simple video display rendering (just drawImage, no QR scanning)
+      if (this.config.displayCanvas) {
+        console.log('[QRScanner] Starting canvas video display');
+        this.startCanvasDisplay(videoElement, this.config.displayCanvas);
+      }
+
+      // DISABLED: Old fallback with expensive multi-granularity tiled scanning
+      // The scanAllQRCodes() function is too expensive to run every 500ms on real-time video
+      // It caused 5-10 second frame delays. Replaced with simple canvas display above.
       // this.startFallbackCanvasScanning(videoElement);
     } catch (e) {
       console.error('[QRScanner] Start failed:', e);
@@ -96,6 +101,38 @@ export class QRScanner {
       this.config.onError?.(msg);
       throw e;
     }
+  }
+
+  private startCanvasDisplay(videoElement: HTMLVideoElement, displayCanvas: HTMLCanvasElement): void {
+    // Simple video display rendering using requestAnimationFrame
+    // This runs at ~30fps and just draws video to canvas for UI display
+    // No QR scanning here - that's done by the main qr-scanner library
+    console.log('[QRScanner] Canvas display started');
+
+    const renderFrame = () => {
+      try {
+        const ctx = displayCanvas.getContext('2d');
+        if (!ctx || videoElement.paused) {
+          this.displayFrameId = requestAnimationFrame(renderFrame);
+          return;
+        }
+
+        // Set canvas size to match video
+        if (displayCanvas.width !== videoElement.videoWidth || displayCanvas.height !== videoElement.videoHeight) {
+          displayCanvas.width = videoElement.videoWidth || 320;
+          displayCanvas.height = videoElement.videoHeight || 240;
+        }
+
+        // Draw current video frame to canvas
+        ctx.drawImage(videoElement, 0, 0);
+      } catch (e) {
+        // Silent - video may not be ready yet
+      }
+
+      this.displayFrameId = requestAnimationFrame(renderFrame);
+    };
+
+    this.displayFrameId = requestAnimationFrame(renderFrame);
   }
 
   private startFallbackCanvasScanning(videoElement: HTMLVideoElement): void {
@@ -156,6 +193,11 @@ export class QRScanner {
   stop(): void {
     console.log('[QRScanner] Stop called - cleaning up...');
     try {
+      if (this.displayFrameId !== null) {
+        console.log('[QRScanner] Canceling canvas display frame');
+        cancelAnimationFrame(this.displayFrameId);
+        this.displayFrameId = null;
+      }
       if (this.fallbackInterval) {
         console.log('[QRScanner] Clearing fallback interval');
         clearInterval(this.fallbackInterval);
