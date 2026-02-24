@@ -764,27 +764,43 @@
                     </div>
                   {:else}
                     <!-- Format Selection -->
-                    <h4 class="text-xs text-muted mb-sm">EXPORT FORMAT</h4>
+                    <h4 class="text-xs text-muted mb-md">EXPORT FORMAT</h4>
                     <div class="export-options">
                       <button class="export-option" onclick={() => { exportPassword = ' '; }}>
-                        <i class="fa-thin fa-file-code"></i>
-                        <span class="export-option-label">JSON</span>
-                        <span class="export-option-desc text-xs text-muted">Encrypted backup (password required)</span>
+                        <div class="export-option-icon">
+                          <i class="fa-thin fa-file-code"></i>
+                        </div>
+                        <div class="export-option-content">
+                          <div class="export-option-title">JSON</div>
+                          <div class="export-option-desc">AES-256-GCM encrypted seed phrase backup. Password-protected JSON file. Use for secure offline storage or cross-device recovery. Requires password to decrypt.</div>
+                        </div>
                       </button>
                       <button class="export-option" onclick={() => exportAsQR(secret)}>
-                        <i class="fa-thin fa-file-code"></i>
-                        <span class="export-option-label">Share Cards HTML</span>
-                        <span class="export-option-desc text-xs text-muted">Full-page layout as HTML file - {secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares} shares</span>
+                        <div class="export-option-icon">
+                          <i class="fa-thin fa-file-code"></i>
+                        </div>
+                        <div class="export-option-content">
+                          <div class="export-option-title">Share Cards HTML</div>
+                          <div class="export-option-desc">Printable HTML file with {secret.shamirConfig.threshold}-of-{secret.shamirConfig.totalShares} Shamir shares. Pre-rendered QR codes embedded. Print to PDF or paper for physical backup. Scan individual cards to recover your secret.</div>
+                        </div>
                       </button>
                       <button class="export-option" onclick={() => exportFullPageLayout(secret)}>
-                        <i class="fa-thin fa-file-pdf"></i>
-                        <span class="export-option-label">Share Cards PDF</span>
-                        <span class="export-option-desc text-xs text-muted">Full-page layout as PDF - scannable {secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares} shares</span>
+                        <div class="export-option-icon">
+                          <i class="fa-thin fa-file-pdf"></i>
+                        </div>
+                        <div class="export-option-content">
+                          <div class="export-option-title">Share Cards PDF</div>
+                          <div class="export-option-desc">Professional PDF document with {secret.shamirConfig.threshold}-of-{secret.shamirConfig.totalShares} Shamir shares on full-page cards. Optimized for printing with 80% QR code size for reliable scanning. Download and print to create physical backup.</div>
+                        </div>
                       </button>
                       <button class="export-option" onclick={() => exportAsQRImage(secret)}>
-                        <i class="fa-thin fa-qrcode"></i>
-                        <span class="export-option-label">Vault Backup HTML</span>
-                        <span class="export-option-desc text-xs text-muted">Complete seed phrase backup with QR code, instructions, and security info</span>
+                        <div class="export-option-icon">
+                          <i class="fa-thin fa-qrcode"></i>
+                        </div>
+                        <div class="export-option-content">
+                          <div class="export-option-title">Vault Backup HTML</div>
+                          <div class="export-option-desc">Complete vault backup with embedded QR code, full seed phrase, all {secret.addressCount} derived addresses, instructions, and security warnings. Store separate from share cards as an additional backup layer.</div>
+                        </div>
                       </button>
                     </div>
                     <div class="popup-actions mt-md">
@@ -1069,36 +1085,47 @@
   .export-options {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
   .export-option {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: var(--spacing-sm) var(--spacing-md);
+    display: grid;
+    grid-template-columns: 2rem 1fr;
+    gap: 1rem;
+    padding: var(--spacing-md);
     text-align: left;
     text-transform: none;
     letter-spacing: 0;
     border: 1px solid var(--color-border);
     background: var(--color-bg);
+    align-items: flex-start;
   }
   .export-option:hover {
     border-color: var(--color-accent);
     background: var(--color-bg-alt);
   }
-  .export-option i {
-    font-size: 1.4rem;
-    min-width: 1.6rem;
-    text-align: center;
-    color: var(--color-accent);
-    margin-top: 0.1rem;
+  .export-option-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 2.5rem;
   }
-  .export-option-label {
+  .export-option-icon i {
+    font-size: 1.4rem;
+    color: var(--color-accent);
+  }
+  .export-option-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .export-option-title {
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
+    color: var(--color-text);
   }
   .export-option-desc {
-    display: block;
-    line-height: 1.3;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--color-text-muted);
   }
 </style>
