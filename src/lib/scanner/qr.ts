@@ -19,6 +19,7 @@ export class QRScanner {
   private fallbackInterval: ReturnType<typeof setInterval> | null = null;
   private fallbackFrameCount = 0;
   private displayFrameId: ReturnType<typeof requestAnimationFrame> | null = null;
+  private jsqrFallbackInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(config: ScannerConfig) {
     this.config = config;
@@ -88,9 +89,14 @@ export class QRScanner {
         this.startCanvasDisplay(videoElement, this.config.displayCanvas);
       }
 
+      // Start lightweight jsQR fallback (every 2 seconds, simple single-pass scan)
+      // This catches QR codes that zxing library misses
+      console.log('[QRScanner] Starting lightweight jsQR fallback (every 2s)');
+      this.startJsQRFallback(videoElement);
+
       // DISABLED: Old fallback with expensive multi-granularity tiled scanning
       // The scanAllQRCodes() function is too expensive to run every 500ms on real-time video
-      // It caused 5-10 second frame delays. Replaced with simple canvas display above.
+      // It caused 5-10 second frame delays. Replaced with lightweight jsQR above.
       // this.startFallbackCanvasScanning(videoElement);
     } catch (e) {
       console.error('[QRScanner] Start failed:', e);
@@ -133,6 +139,55 @@ export class QRScanner {
     };
 
     this.displayFrameId = requestAnimationFrame(renderFrame);
+  }
+
+  private startJsQRFallback(videoElement: HTMLVideoElement): void {
+    // Lightweight jsQR fallback - runs every 2 seconds
+    // Single-pass scan to catch QR codes that zxing library misses
+    // No expensive tiling/upscaling - just simple detection
+    console.log('[QRScanner] jsQR fallback initialized (2s interval)');
+    let scanCount = 0;
+
+    this.jsqrFallbackInterval = setInterval(() => {
+      try {
+        // Skip if video not ready or in cooldown
+        if (videoElement.paused || this.cooldown) return;
+
+        scanCount++;
+
+        // Create temporary canvas for this frame
+        const w = videoElement.videoWidth || 320;
+        const h = videoElement.videoHeight || 240;
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Draw current video frame
+        ctx.drawImage(videoElement, 0, 0);
+
+        // Simple single-pass jsQR scan (no tiling, no upscaling)
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const code = jsQR(imageData.data, w, h);
+
+        if (code) {
+          console.log(`[QRScanner] jsQR fallback detected code on scan #${scanCount}:`, code.data);
+          if (!this.cooldown) {
+            this.cooldown = true;
+            this.config.onStatusChange?.('detected');
+            const accepted = this.config.onScan(code.data);
+            setTimeout(() => {
+              this.cooldown = false;
+              this.config.onStatusChange?.('scanning');
+            }, accepted ? 1500 : 500);
+          }
+        }
+      } catch (e) {
+        // Silent - continue scanning
+      }
+    }, 2000); // Every 2 seconds
   }
 
   private startFallbackCanvasScanning(videoElement: HTMLVideoElement): void {
@@ -198,8 +253,13 @@ export class QRScanner {
         cancelAnimationFrame(this.displayFrameId);
         this.displayFrameId = null;
       }
+      if (this.jsqrFallbackInterval) {
+        console.log('[QRScanner] Clearing jsQR fallback interval');
+        clearInterval(this.jsqrFallbackInterval);
+        this.jsqrFallbackInterval = null;
+      }
       if (this.fallbackInterval) {
-        console.log('[QRScanner] Clearing fallback interval');
+        console.log('[QRScanner] Clearing old fallback interval');
         clearInterval(this.fallbackInterval);
         this.fallbackInterval = null;
       }
