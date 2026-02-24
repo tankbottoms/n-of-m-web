@@ -303,36 +303,16 @@
     exportId = null;
   }
 
-  async function exportAllLayouts(secret: SecretRecord) {
+  async function exportFullPageLayout(secret: SecretRecord) {
     await ensureQRious();
     const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
     const timestamp = datetimeStamp();
     const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
 
-    // Download all layouts as PDF files
-    const layouts = [
-      { type: 'full-page' as const, label: 'full' },
-      { type: '2-up' as const, label: 'compact' }
-    ];
+    // Generate full-page layout PDF with 80% QR code size for optimal scannability
+    const html = generatePrintHTML(shares, '#A8D8EA', 'full-page', secret.addresses.slice(0, 5));
+    await downloadPDF(html, `${safeName}-shares-${timestamp}.pdf`);
 
-    for (const layout of layouts) {
-      const html = generatePrintHTML(shares, '#A8D8EA', layout.type, secret.addresses.slice(0, 5));
-      await downloadPDF(html, `${safeName}-shares-${layout.label}-${timestamp}.pdf`);
-      // Small delay between downloads to avoid browser throttling
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    exportId = null;
-  }
-
-  async function exportAllLayoutsCombined(secret: SecretRecord) {
-    await ensureQRious();
-    const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
-    const timestamp = datetimeStamp();
-    const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
-
-    const html = generateAllLayoutsHTML(shares, '#A8D8EA', secret.addresses.slice(0, 5));
-    await downloadPDF(html, `${safeName}-shares-all-layouts-${timestamp}.pdf`);
     exportId = null;
   }
 
@@ -733,15 +713,10 @@
                         <span class="export-option-label">Share Cards (Full)</span>
                         <span class="export-option-desc text-xs text-muted">Full-page layout ({secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares})</span>
                       </button>
-                      <button class="export-option" onclick={() => exportAllLayouts(secret)}>
-                        <i class="fa-thin fa-download"></i>
-                        <span class="export-option-label">All Layouts (PDF)</span>
-                        <span class="export-option-desc text-xs text-muted">Download full and compact layouts as separate PDF files</span>
-                      </button>
-                      <button class="export-option" onclick={() => exportAllLayoutsCombined(secret)}>
-                        <i class="fa-thin fa-file"></i>
-                        <span class="export-option-label">Combined PDF</span>
-                        <span class="export-option-desc text-xs text-muted">Both layouts in one PDF document</span>
+                      <button class="export-option" onclick={() => exportFullPageLayout(secret)}>
+                        <i class="fa-thin fa-file-pdf"></i>
+                        <span class="export-option-label">Full Page PDF</span>
+                        <span class="export-option-desc text-xs text-muted">Share cards with 80% QR code for optimal scannability</span>
                       </button>
                       <button class="export-option" onclick={() => exportVaultQRCode(secret)}>
                         <i class="fa-thin fa-image"></i>

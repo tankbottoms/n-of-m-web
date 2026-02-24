@@ -601,11 +601,7 @@
             </div>
           {/if}
 
-          <div class="layout-toggle mb-md">
-            <span class="text-xs text-muted">LAYOUT: </span>
-            <button class:primary={layoutType === 'full-page'} onclick={() => { layoutType = 'full-page'; }}>Full</button>
-            <button class:primary={layoutType === '2-up'} onclick={() => { layoutType = '2-up'; }}>Compact</button>
-          </div>
+          <!-- Full-page layout only (80% QR code for optimal scannability) -->
 
           <div class="share-cards-grid">
             {#each shares as share}
