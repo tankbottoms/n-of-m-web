@@ -73,6 +73,14 @@
     if (state !== 'scanning') return false;
     try {
       const payload: SharePayload = JSON.parse(data);
+
+      // Check if this is a vault QR code (full secret data) instead of a share
+      if (!payload.shareData && payload.mnemonic) {
+        error = 'This is a vault backup QR code, not a share card. Please scan individual share cards instead.';
+        return false;
+      }
+
+      // Validate share format
       if (payload.v !== 1 || !payload.shareData || !payload.id) {
         return false;
       }
