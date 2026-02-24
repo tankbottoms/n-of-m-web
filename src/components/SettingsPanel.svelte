@@ -197,9 +197,24 @@
         </div>
       </div>
 
-      {#if clearMessage}
-        <p class="text-xs mt-sm text-muted">{clearMessage}</p>
-      {/if}
+      <div class="clear-data-area">
+        {#if clearConfirm}
+          <p class="text-xs mb-sm" style="color: var(--color-error);">This will permanently delete ALL stored data including vault secrets. Are you sure?</p>
+          <div class="clear-actions">
+            <button onclick={() => { clearConfirm = false; }}>Cancel</button>
+            <button onclick={handleClearAllData} style="color: var(--color-error);">
+              <i class="fa-thin fa-trash"></i> Confirm Delete All
+            </button>
+          </div>
+        {:else}
+          <button onclick={handleClearAllData} style="color: var(--color-error);">
+            <i class="fa-thin fa-trash"></i> Clear All Data
+          </button>
+        {/if}
+        {#if clearMessage}
+          <p class="text-xs mt-sm text-muted">{clearMessage}</p>
+        {/if}
+      </div>
     </div>
   </Panel>
 
@@ -230,6 +245,11 @@
         Download the entire app as a single HTML file (571 KB). No installation, no dependencies &mdash;
         open it in any browser for fully offline use. Includes all code, styles, and fonts inlined.
       </p>
+      <div class="standalone-download-area">
+        <a href="/n-of-m-standalone.html" download="n-of-m-standalone.html" class="download-btn">
+          <i class="fa-thin fa-download"></i> Download Standalone HTML
+        </a>
+      </div>
     </div>
   </Panel>
 
@@ -320,26 +340,6 @@
     </div>
   </Panel>
 
-  <div class="settings-footer">
-    {#if clearConfirm}
-      <p class="text-xs mb-sm" style="color: var(--color-error);">This will permanently delete ALL stored data including vault secrets. Are you sure?</p>
-      <div class="footer-actions">
-        <button onclick={() => { clearConfirm = false; }}>Cancel</button>
-        <button onclick={handleClearAllData} style="color: var(--color-error);">
-          <i class="fa-thin fa-trash"></i> Confirm Delete All
-        </button>
-      </div>
-    {:else}
-      <div class="footer-actions">
-        <button onclick={handleClearAllData} style="color: var(--color-error);">
-          <i class="fa-thin fa-trash"></i> Clear All Data
-        </button>
-        <a href="/n-of-m-standalone.html" download="n-of-m-standalone.html" class="download-btn">
-          <i class="fa-thin fa-download"></i> Download Standalone HTML
-        </a>
-      </div>
-    {/if}
-  </div>
 </div>
 
 <style>
@@ -570,32 +570,26 @@
     box-shadow: 3px 3px 0px var(--color-shadow);
     transform: translate(-1px, -1px);
   }
-  .settings-footer {
+  .clear-data-area {
     display: flex;
-    flex-direction: column;
+    justify-content: flex-end;
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--color-border);
+  }
+  .clear-actions {
+    display: flex;
     gap: 0.5rem;
-    align-items: flex-end;
-    padding: var(--spacing-md);
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: 0;
-    box-shadow: 2px 2px 0px var(--color-shadow);
+  }
+  .standalone-download-area {
+    display: flex;
+    justify-content: flex-end;
     margin-top: var(--spacing-md);
   }
-  .footer-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
   @media (max-width: 480px) {
-    .footer-actions {
-      flex-direction: column-reverse;
-      width: 100%;
-    }
-    .footer-actions button,
-    .footer-actions a {
-      width: 100%;
+    .clear-data-area,
+    .standalone-download-area {
+      justify-content: flex-start;
     }
   }
 </style>

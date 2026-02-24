@@ -318,7 +318,7 @@
     const timestamp = datetimeStamp();
     const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
 
-    // Generate full-page layout PDF with 80% QR code size for optimal scannability
+    // Generate full-page layout PDF with enlarged 150% QR codes for maximum scannability
     const html = generatePrintHTML(shares, '#A8D8EA', 'full-page', secret.addresses);
     await downloadPDF(html, `${safeName}-shares-${timestamp}.pdf`);
 
@@ -794,7 +794,7 @@ var vaultData = ${JSON.stringify(exportData)};
                         </div>
                         <div class="export-option-content">
                           <div class="export-option-title">Share Cards PDF</div>
-                          <div class="export-option-desc">Professional PDF document with {secret.shamirConfig.threshold}-of-{secret.shamirConfig.totalShares} Shamir shares on full-page cards. Optimized for printing with 80% QR code size for reliable scanning. Download and print to create physical backup.</div>
+                          <div class="export-option-desc">Professional PDF document with {secret.shamirConfig.threshold}-of-{secret.shamirConfig.totalShares} Shamir shares on full-page cards. Enlarged 150% QR codes for reliable scanning on mobile and desktop. Download and print to create physical backup.</div>
                         </div>
                       </button>
                       <button class="export-option" onclick={() => exportAsQRImage(secret)}>
