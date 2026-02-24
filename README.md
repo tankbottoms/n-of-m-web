@@ -37,7 +37,7 @@ Shamir's Secret Sharing for Seed Phrases. Split. Print. Recover.
 - Date/time stamps on all exports
 - Print-optimized CSS and formatting
 - Security information and usage instructions
-- QR codes at 168px (80% of card width) for optimal scannability
+- QR codes optimized for scannability and print page fitting
 
 ## Cryptography
 
