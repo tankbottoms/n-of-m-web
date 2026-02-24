@@ -18,7 +18,7 @@ export const LAYOUTS: Record<LayoutType, LayoutConfig> = {
     cardsPerPage: 1,
     cardWidth: '100%',
     cardHeight: '100%',
-    qrSize: 168, // 80% of card width for optimal scannability
+    qrSize: 252, // 150% enlarged for mobile/desktop scanning reliability
     orientation: 'portrait',
     fontSize: 11,
   },
