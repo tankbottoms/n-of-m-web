@@ -86,19 +86,26 @@ export async function downloadPDF(html: string, filename: string): Promise<void>
 
     const element = document.createElement('div');
     element.innerHTML = html;
+    element.style.position = 'fixed';
+    element.style.left = '-9999px';
+    element.style.width = '816px'; // 8.5in at 96dpi for A4 portrait
+    element.style.background = 'white';
+    document.body.appendChild(element);
 
     const opt = {
-      margin: 10,
+      margin: 0,
       filename: filename,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
+      image: { type: 'png', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 816 },
       jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      pagebreak: { mode: 'css' }
     };
 
     await html2pdf().set(opt).from(element).save();
+    document.body.removeChild(element);
   } catch (e) {
     console.error('[PDF] Failed to generate PDF:', e);
+    document.body.removeChild(element);
     throw new Error('Failed to generate PDF');
   }
 }

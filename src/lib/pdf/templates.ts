@@ -154,7 +154,10 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
   .page > .card { flex: 1; display: flex; flex-direction: column; }
 
   /* Card base */
-  .card { border: 3px solid #000; box-shadow: 4px 4px 0 #000; display: flex; flex-direction: column; width: 100%; overflow: hidden; }
+  .card { border: 3px solid #000; box-shadow: none; display: flex; flex-direction: column; width: 100%; overflow: hidden; }
+  @media print {
+    .card { box-shadow: none; }
+  }
   .header { padding: 6px 12px; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 3px solid #000; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .header-title { font-size: 13px; }
   .header-meta { font-size: 9px; letter-spacing: 0.5px; opacity: 0.7; }
@@ -194,13 +197,24 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
   @media screen {
     body { background: #f0f0f0; padding: 2em 0; }
     .page { page-break-after: auto; min-height: auto; width: 50%; margin: 0 auto; gap: 2em; }
-    .page > .card { flex: none; box-shadow: 6px 6px 0 rgba(0,0,0,0.2); margin-bottom: 2em; }
+    .page > .card { flex: none; box-shadow: none; margin-bottom: 2em; }
     .page > .card:last-child { margin-bottom: 0; }
+  }
+
+  @media print {
+    body { padding: 0; margin: 0; }
+    .page { width: 100%; min-height: 100%; }
   }
 </style>
 </head>
 <body>
-${pages.join('\n')}
+<div style="margin-bottom: 1cm;">
+  <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.5cm; border-bottom: 2px solid #000;">
+    <h1 style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; margin: 0;">Shamir Secret Sharing Card</h1>
+    <span style="font-size: 10px; color: #666;">v0.3.2</span>
+  </div>
+</div>
+${pages.map((page, idx) => `<div style="margin-bottom: 1cm; page-break-after: always;">${page}</div>`).join('\n')}
 ${qrScripts ? `<script>\n${qrScripts}\n</${''}script>` : ''}
 </body>
 </html>`;
