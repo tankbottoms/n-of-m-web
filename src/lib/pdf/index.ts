@@ -103,6 +103,39 @@ export async function downloadPDF(html: string, filename: string): Promise<void>
   }
 }
 
+export async function downloadHTMLAsImage(html: string, filename: string): Promise<void> {
+  try {
+    const { default: html2canvas } = await import('html2canvas');
+
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    element.style.position = 'fixed';
+    element.style.left = '-9999px';
+    element.style.top = '0';
+    element.style.width = '816px'; // 8.5in at 96dpi
+    element.style.height = 'auto';
+    element.style.background = 'white';
+    element.style.padding = '40px';
+    document.body.appendChild(element);
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false
+    });
+
+    document.body.removeChild(element);
+
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = filename;
+    link.click();
+  } catch (e) {
+    console.error('[HTML2Image] Failed to generate image:', e);
+    throw new Error('Failed to generate image');
+  }
+}
+
 export function generateAllLayoutsHTML(
   shares: import('../types').SharePayload[],
   highlightColor: string,

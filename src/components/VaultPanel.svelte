@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import type { SecretRecord, PathType, ShareSet, SharePayload } from '$lib/types';
   import { getAllSecrets, deleteSecret, updateSecret, hasVaultPassword, verifyVaultPassword, saveSecret } from '$lib/storage';
-  import { generatePrintHTML, printCards, downloadHTML, downloadPDF, datetimeStamp, ensureQRious, generateAllLayoutsHTML } from '$lib/pdf';
+  import { generatePrintHTML, printCards, downloadHTML, downloadPDF, downloadHTMLAsImage, datetimeStamp, ensureQRious, generateAllLayoutsHTML } from '$lib/pdf';
   import type { LayoutType } from '$lib/pdf';
   import { split } from '$lib/shamir';
   import { deriveAddresses } from '$lib/wallet';
@@ -453,13 +453,25 @@ var vaultData = ${JSON.stringify(exportData)};
 </html>`;
 
     // Download as HTML file
+    const timestamp = datetimeStamp();
+    const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-vault-backup-${datetimeStamp()}.html`;
+    a.download = `${safeName}-vault-backup-${timestamp}.html`;
     a.click();
     URL.revokeObjectURL(url);
+
+    // Also download as PNG image for backup
+    try {
+      setTimeout(() => {
+        downloadHTMLAsImage(html, `${safeName}-vault-backup-${timestamp}.png`);
+      }, 500);
+    } catch (e) {
+      console.warn('Failed to generate PNG backup:', e);
+    }
+
     exportId = null;
   }
 
