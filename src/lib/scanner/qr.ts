@@ -78,12 +78,15 @@ export class QRScanner {
       }
 
       // Video element is hidden by qr-scanner by design
-      // Canvas rendering will handle both display and detection
-      console.log('[QRScanner] Using canvas for display and detection');
+      // qr-scanner uses zxing library which runs in Web Worker for efficient detection
+      console.log('[QRScanner] Relying on qr-scanner library for QR detection (maxScansPerSecond: 10)');
 
-      // Start fallback canvas-based scanning (helps with Safari compatibility issues)
-      console.log('[QRScanner] Starting fallback canvas scanning as backup...');
-      this.startFallbackCanvasScanning(videoElement);
+      // DISABLED: Fallback canvas-based scanning was causing severe performance degradation
+      // The scanAllQRCodes() function with multi-granularity tiled scanning is too expensive
+      // to run every 500ms on real-time video. It caused 5-10 second frame delays.
+      // The main qr-scanner library with zxing is sufficient for most use cases.
+      // If Safari-specific issues arise, can be re-enabled with reduced frequency (e.g., 5 second intervals)
+      // this.startFallbackCanvasScanning(videoElement);
     } catch (e) {
       console.error('[QRScanner] Start failed:', e);
       this.scanner.destroy();
