@@ -108,34 +108,53 @@ export class QRScanner {
       this.fallbackFrameCount++;
 
       try {
+        // Get video dimensions (use defaults if not yet available)
+        const videoWidth = videoElement.videoWidth || 640;
+        const videoHeight = videoElement.videoHeight || 480;
+
         // Render to display canvas for smooth visual feedback
-        if (displayCanvas && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
-          displayCanvas.width = videoElement.videoWidth;
-          displayCanvas.height = videoElement.videoHeight;
+        if (displayCanvas) {
+          displayCanvas.width = videoWidth;
+          displayCanvas.height = videoHeight;
           const ctx = displayCanvas.getContext('2d');
           if (ctx) {
-            ctx.drawImage(videoElement, 0, 0);
+            try {
+              ctx.drawImage(videoElement, 0, 0);
+            } catch (e) {
+              // Video not ready yet, silent fail
+            }
           }
         }
 
         // Scan for QR codes periodically
         const now = Date.now();
-        if (now - lastScanTime >= SCAN_INTERVAL && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+        if (now - lastScanTime >= SCAN_INTERVAL) {
           lastScanTime = now;
 
           const canvas = document.createElement('canvas');
-          canvas.width = videoElement.videoWidth;
-          canvas.height = videoElement.videoHeight;
+          canvas.width = videoWidth;
+          canvas.height = videoHeight;
           const ctx = canvas.getContext('2d');
           if (!ctx) return;
 
-          ctx.drawImage(videoElement, 0, 0);
+          try {
+            ctx.drawImage(videoElement, 0, 0);
+          } catch (e) {
+            // Video frame not ready, skip this scan
+            if (this.fallbackFrameCount % 100 === 0) {
+              console.log('[QRScanner] Video frame not ready for scanning');
+            }
+            return;
+          }
+
           const codes = scanAllQRCodes(canvas, ctx);
-          console.log(`[QRScanner] Scan attempt: found ${codes.length} QR codes`);
+          if (this.fallbackFrameCount % 30 === 0) {
+            console.log(`[QRScanner] Scan check (frame ${this.fallbackFrameCount}): found ${codes.length} QR codes`);
+          }
 
           for (const code of codes) {
             if (code && !this.cooldown) {
-              console.log('[QRScanner] QR code detected');
+              console.log('[QRScanner] QR code detected!');
               this.cooldown = true;
               this.config.onStatusChange?.('detected');
               const accepted = this.config.onScan(code);
@@ -153,17 +172,23 @@ export class QRScanner {
   }
 
   stop(): void {
-    console.log('[QRScanner] Stopping scanner...');
-    if (this.fallbackInterval) {
-      clearInterval(this.fallbackInterval);
-      this.fallbackInterval = null;
+    console.log('[QRScanner] Stop called - cleaning up...');
+    try {
+      if (this.fallbackInterval) {
+        console.log('[QRScanner] Clearing fallback interval');
+        clearInterval(this.fallbackInterval);
+        this.fallbackInterval = null;
+      }
+      if (this.scanner) {
+        console.log('[QRScanner] Destroying qr-scanner');
+        this.scanner.stop();
+        this.scanner.destroy();
+        this.scanner = null;
+      }
+    } catch (e) {
+      console.error('[QRScanner] Error during stop:', e);
     }
-    if (this.scanner) {
-      this.scanner.stop();
-      this.scanner.destroy();
-      this.scanner = null;
-      console.log('[QRScanner] Scanner stopped');
-    }
+    console.log('[QRScanner] Scanner fully stopped');
     this.config.onStatusChange?.('idle');
   }
 }
