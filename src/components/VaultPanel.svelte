@@ -298,7 +298,7 @@
   async function exportAsQR(secret: SecretRecord) {
     await ensureQRious();
     const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
-    const html = generatePrintHTML(shares, '#A8D8EA', 'full-page', secret.addresses.slice(0, 5));
+    const html = generatePrintHTML(shares, '#A8D8EA', 'full-page', secret.addresses);
     downloadHTML(html, `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-shares-${datetimeStamp()}.html`);
     exportId = null;
   }
@@ -310,42 +310,9 @@
     const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
 
     // Generate full-page layout PDF with 80% QR code size for optimal scannability
-    const html = generatePrintHTML(shares, '#A8D8EA', 'full-page', secret.addresses.slice(0, 5));
+    const html = generatePrintHTML(shares, '#A8D8EA', 'full-page', secret.addresses);
     await downloadPDF(html, `${safeName}-shares-${timestamp}.pdf`);
 
-    exportId = null;
-  }
-
-  async function exportVaultQRCode(secret: SecretRecord) {
-    await ensureQRious();
-    const timestamp = datetimeStamp();
-    const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
-
-    const exportData = {
-      name: secret.name,
-      createdAt: new Date(secret.createdAt).toISOString(),
-      mnemonic: secret.mnemonic,
-      wordCount: secret.wordCount,
-      derivationPath: secret.derivationPath,
-      pathType: secret.pathType,
-      addressCount: secret.addressCount,
-      addresses: secret.addresses.map(a => ({ index: a.index, address: a.address })),
-      shamirConfig: secret.shamirConfig,
-      hasPassphrase: secret.hasPassphrase,
-      hasPIN: secret.hasPIN,
-    };
-    const json = JSON.stringify(exportData);
-    const canvas = document.createElement('canvas');
-    new (window as any).QRious({ element: canvas, value: json, size: 1024, level: 'L', padding: 16 });
-    canvas.toBlob((blob: Blob | null) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${safeName}-vault-qr-${timestamp}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-    });
     exportId = null;
   }
 
@@ -600,18 +567,7 @@
               {#if reprintId === secret.id}
                 <button class="popup-overlay" onclick={() => { reprintId = null; }} aria-label="Close popup"></button>
                 <div class="popup-card shares-popup">
-                  <h4 class="text-xs text-muted mb-sm">CARD SIZE</h4>
-                  <div class="popup-options">
-                    <button class:primary={reprintLayout === 'full-page'} onclick={() => { reprintLayout = 'full-page'; }}>
-                      <i class="fa-thin fa-file"></i> Full Page
-                    </button>
-                    <button class:primary={reprintLayout === '2-up'} onclick={() => { reprintLayout = '2-up'; }}>
-                      <i class="fa-thin fa-columns"></i> Compact
-                    </button>
-                  </div>
-
-                  <div class="popup-divider"></div>
-
+                  <!-- Full-page layout only for all reprints -->
                   <h4 class="text-xs text-muted mb-sm">REPRINT ORIGINAL ({secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares})</h4>
                   <button class="primary" onclick={() => handleReprint(secret)}>
                     <i class="fa-thin fa-print"></i> Reprint
@@ -703,25 +659,20 @@
                         <span class="export-option-label">JSON</span>
                         <span class="export-option-desc text-xs text-muted">Encrypted backup (password required)</span>
                       </button>
-                      <button class="export-option" onclick={() => exportAsQRImage(secret)}>
-                        <i class="fa-thin fa-qrcode"></i>
-                        <span class="export-option-label">QR Code PNG</span>
-                        <span class="export-option-desc text-xs text-muted">Single QR code image with full secret data</span>
-                      </button>
                       <button class="export-option" onclick={() => exportAsQR(secret)}>
-                        <i class="fa-thin fa-print"></i>
-                        <span class="export-option-label">Share Cards (Full)</span>
-                        <span class="export-option-desc text-xs text-muted">Full-page layout ({secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares})</span>
+                        <i class="fa-thin fa-file-code"></i>
+                        <span class="export-option-label">Share Cards HTML</span>
+                        <span class="export-option-desc text-xs text-muted">Full-page layout as HTML file - {secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares} shares</span>
                       </button>
                       <button class="export-option" onclick={() => exportFullPageLayout(secret)}>
                         <i class="fa-thin fa-file-pdf"></i>
-                        <span class="export-option-label">Full Page PDF</span>
-                        <span class="export-option-desc text-xs text-muted">Share cards with 80% QR code for optimal scannability</span>
+                        <span class="export-option-label">Share Cards PDF</span>
+                        <span class="export-option-desc text-xs text-muted">Full-page layout as PDF - scannable {secret.shamirConfig.threshold}/{secret.shamirConfig.totalShares} shares</span>
                       </button>
-                      <button class="export-option" onclick={() => exportVaultQRCode(secret)}>
-                        <i class="fa-thin fa-image"></i>
-                        <span class="export-option-label">Vault QR Code</span>
-                        <span class="export-option-desc text-xs text-muted">Full secret data as single QR code PNG</span>
+                      <button class="export-option" onclick={() => exportAsQRImage(secret)}>
+                        <i class="fa-thin fa-qrcode"></i>
+                        <span class="export-option-label">Vault QR Code PNG</span>
+                        <span class="export-option-desc text-xs text-muted">Complete vault backup as PNG QR code (cannot be imported via scanner)</span>
                       </button>
                     </div>
                     <div class="popup-actions mt-md">

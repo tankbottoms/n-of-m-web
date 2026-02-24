@@ -505,7 +505,7 @@
           </div>
           <div class="format-item">
             <span class="format-icon"><i class="fa-thin fa-file-pdf"></i></span>
-            <span class="format-label"><strong>PDF Exports</strong> - Full-page or compact PDFs from vault export</span>
+            <span class="format-label"><strong>PDF Exports</strong> - Full-page PDFs from vault export</span>
           </div>
           <div class="format-item">
             <span class="format-icon"><i class="fa-thin fa-file-code"></i></span>

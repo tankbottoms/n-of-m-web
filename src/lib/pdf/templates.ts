@@ -15,9 +15,8 @@ export function renderCardHTML(
 
   const pinInfo = share.hasPIN ? 'Pin: enabled' : 'Pin: none';
   const ppInfo = share.hasPassphrase ? 'Passphrase: enabled' : 'Passphrase: none';
-  const isCompact = layout.cardsPerPage >= 2;
 
-  const maxAddrs = isCompact ? 5 : addresses.length;
+  const maxAddrs = addresses.length;
   const displayAddrs = addresses.slice(0, maxAddrs);
   const addressesHTML = addresses.length > 0 ? `
     <div class="addresses-section">
@@ -44,20 +43,17 @@ export function renderCardHTML(
           <p>To reconstruct the secret, collect and scan
           <b>at least ${share.threshold} of the ${share.totalShares} total share cards</b>
           using the Shamir recovery app.</p>
-          ${!isCompact ? `
           <p>During recovery you <u>may need to provide a PIN</u>.
           You <u>may also be asked additional questions</u> about
           your secret&rsquo;s configuration.</p>
           <p><b>Do not store all shares in the same location.</b>
           Each share should be kept <b>secure and separate</b>.</p>
-          ` : ''}
         </div>
       </div>
       <div class="section date-row">
         <div class="section-label">CREATED</div>
         <span class="date-value">${date}</span>
       </div>
-      ${!isCompact ? `
       <div class="section notes-section">
         <div class="section-label">NOTES</div>
         <div class="note-line"></div>
@@ -65,7 +61,6 @@ export function renderCardHTML(
         <div class="note-line"></div>
         <div class="note-line"></div>
       </div>
-      ` : ''}
       <div class="section bottom-section">
         <div class="share-qr">
           ${qrImageSrc
@@ -79,13 +74,11 @@ export function renderCardHTML(
             reconstruction process. You will need to scan at
             least <b>${share.threshold}&nbsp;cards</b> total.</p>
           </div>
-          ${!isCompact ? `
           <div class="qr-info-bottom">
             <p><b>Handle with care.</b> If this card is lost or
             damaged you will need the remaining shares to recover
             your secret. <b>There are no backups.</b></p>
           </div>
-          ` : ''}
           ${addressesHTML}
         </div>
       </div>
@@ -118,27 +111,13 @@ export function renderPageHTML(
   addresses: import('../types').DerivedAddress[] = [],
   qrImages: string[] = []
 ): string {
-  let pages: string[];
-
   const hasImages = qrImages.length > 0 && qrImages.every(img => img.length > 0);
 
-  if (layout.cardsPerPage === 2) {
-    // Compact: 2 cards per page
-    pages = [];
-    for (let i = 0; i < shares.length; i += 2) {
-      const card1 = renderCardHTML(shares[i], qrDatas[i], highlightColor, layout, `card-${i}`, addresses, hasImages ? qrImages[i] : '');
-      const card2 = i + 1 < shares.length
-        ? renderCardHTML(shares[i + 1], qrDatas[i + 1], highlightColor, layout, `card-${i + 1}`, addresses, hasImages ? qrImages[i + 1] : '')
-        : '';
-      pages.push(`<div class="page compact-page">${card1}\n${card2}</div>`);
-    }
-  } else {
-    // Full page: 1 card per page
-    pages = shares.map((share, i) => {
-      const card = renderCardHTML(share, qrDatas[i], highlightColor, layout, `card-${i}`, addresses, hasImages ? qrImages[i] : '');
-      return `<div class="page">${card}</div>`;
-    });
-  }
+  // Full page: 1 card per page
+  const pages = shares.map((share, i) => {
+    const card = renderCardHTML(share, qrDatas[i], highlightColor, layout, `card-${i}`, addresses, hasImages ? qrImages[i] : '');
+    return `<div class="page">${card}</div>`;
+  });
 
   // Only include QRious CDN script when images aren't pre-rendered (downloadable HTML)
   const needsScript = !hasImages;
@@ -173,10 +152,6 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
 
   /* Full page: card fills the page */
   .page > .card { flex: 1; display: flex; flex-direction: column; }
-
-  /* Compact: 2 cards per page with 1cm gap */
-  .compact-page { gap: 10mm; justify-content: flex-start; }
-  .compact-page > .card { flex: 0 0 auto; max-height: 45%; overflow: hidden; }
 
   /* Card base */
   .card { border: 3px solid #000; box-shadow: 4px 4px 0 #000; display: flex; flex-direction: column; width: 100%; overflow: hidden; }
@@ -221,8 +196,6 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
     .page { page-break-after: auto; min-height: auto; width: 50%; margin: 0 auto; gap: 2em; }
     .page > .card { flex: none; box-shadow: 6px 6px 0 rgba(0,0,0,0.2); margin-bottom: 2em; }
     .page > .card:last-child { margin-bottom: 0; }
-    .compact-page > .card { max-height: none; margin-bottom: 2em; }
-    .compact-page > .card:last-child { margin-bottom: 0; }
   }
 </style>
 </head>
