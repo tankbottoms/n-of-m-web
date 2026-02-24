@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-02-24
+
 ### Added
 - **Vault Backup HTML Export**: New formatted backup document with complete seed phrase, instructions, security warnings, and embedded QR code
 - **Enhanced Export UI**: Explicit labeling of export formats (HTML, PDF, PNG QR codes)
@@ -10,15 +12,18 @@
 
 ### Changed
 - **Layout Standardization**: Removed compact (2-up) and wallet-size (4-up) layouts, standardized to full-page only
-- **QR Code Size**: Reduced full-page QR code from 210px to 168px (80% of container) for optimal scannability
 - **Vault Export Addresses**: Now includes all addresses (previously truncated to first 5) for consistency with share workflow
 - **Export Labels**: Changed to explicit "Share Cards HTML/PDF" and "Vault Backup HTML" labels
 - **QR Scanner Error Handling**: Improved detection of vault backup QR codes with helpful error guidance
+- **Mobile Alignment**: Fixed vault address share sets table to align vertically with address derivations on mobile
+- **Settings Footer**: Moved "Clear All Data" and "Download Standalone HTML" buttons to footer, right-aligned
+- **Documentation**: Clarified QR code sizing documentation in README
 
 ### Fixed
 - **Export Consistency**: Vault exports now match share workflow exports exactly with all addresses included
 - **Export Format Clarity**: Users can now clearly distinguish between share cards and vault backups
 - **QR Import Guidance**: Clear error message guides users to scan individual share cards instead of vault backups
+- **Mobile Layout**: Vault settings tables now have consistent vertical alignment on small screens
 
 ## [0.3.1] - 2026-02-24
 
