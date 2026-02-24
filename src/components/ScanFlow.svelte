@@ -443,6 +443,19 @@
     input.value = '';
   }
 
+  function clearMatches() {
+    // Clear scanned shares and start over with new share set
+    // Keep camera running so user can continue scanning
+    scannedShares = [];
+    targetThreshold = 0;
+    targetTotal = 0;
+    targetId = '';
+    error = null;
+    state = 'scanning';
+    scanStatus = 'idle';
+    console.log('[ScanFlow] Cleared matches, ready for new share set');
+  }
+
   function reset() {
     scannedShares = [];
     targetThreshold = 0;
@@ -579,6 +592,11 @@
           <button onclick={stopCamera}><i class="fa-thin fa-stop"></i> Stop Camera</button>
         {:else}
           <button class="primary" onclick={startCamera}><i class="fa-thin fa-camera"></i> Start Camera</button>
+        {/if}
+        {#if scannedShares.length > 0}
+          <button onclick={clearMatches} title="Clear scanned shares and start over with a new set">
+            <i class="fa-thin fa-rotate-left"></i> Reset Matches
+          </button>
         {/if}
         <button onclick={() => fileInput.click()} disabled={!!uploadStatus}>
           <i class="fa-thin fa-upload"></i> Upload Files
