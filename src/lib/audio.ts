@@ -1,4 +1,5 @@
 let audioCtx: AudioContext | null = null;
+let audioUnlocked = false;
 
 function getAudioContext(): AudioContext {
   if (!audioCtx) {
@@ -7,41 +8,55 @@ function getAudioContext(): AudioContext {
   return audioCtx;
 }
 
+/**
+ * Call this from a user gesture (click/tap) to unlock audio on Safari/iOS.
+ * Safari requires AudioContext creation + resume to happen during a user interaction.
+ * After unlocking, programmatic playConfirmBeep() calls will work from callbacks.
+ */
+export function unlockAudio(): void {
+  try {
+    const ctx = getAudioContext();
+    if (audioUnlocked && ctx.state === 'running') return;
+
+    // Resume the context (required by Safari)
+    ctx.resume().then(() => {
+      // Play a silent buffer to fully unlock iOS audio playback
+      const buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      audioUnlocked = true;
+      console.log('[Audio] Context unlocked via user gesture, state:', ctx.state);
+    }).catch(err => {
+      console.warn('[Audio] Failed to unlock context:', err);
+    });
+  } catch (e) {
+    console.warn('[Audio] Error unlocking audio:', e);
+  }
+}
+
 export function triggerHapticFeedback(): void {
-  // Vibration API support (iOS and Android)
   if (navigator.vibrate) {
-    // Pattern: vibrate for 100ms, pause 50ms, vibrate for 100ms
     navigator.vibrate([100, 50, 100]);
-    console.log('[Haptic] Vibration triggered');
-  } else {
-    console.log('[Haptic] Vibration not supported on this device');
   }
 }
 
 export function playConfirmBeep(): void {
   try {
-    triggerHapticFeedback(); // Always try vibration first (more reliable)
+    triggerHapticFeedback();
 
     const ctx = getAudioContext();
-    console.log('[Audio] Audio context state:', ctx.state, 'Sample rate:', ctx.sampleRate);
 
-    // Handle suspended context (iOS requirement)
     if (ctx.state === 'suspended') {
-      console.log('[Audio] Context suspended, attempting resume...');
       ctx.resume().then(() => {
-        console.log('[Audio] Context resumed, playing beep...');
         playBeepSound(ctx);
-      }).catch(err => {
-        console.log('[Audio] Failed to resume context:', err);
-      });
-      return; // Wait for resume to complete
+      }).catch(() => {});
+      return;
     }
 
-    // If context is running, play immediately
     if (ctx.state === 'running') {
       playBeepSound(ctx);
-    } else {
-      console.log('[Audio] Context in unexpected state:', ctx.state);
     }
   } catch (e) {
     console.error('[Audio] Error in playConfirmBeep:', e);

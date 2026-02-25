@@ -7,7 +7,7 @@
   import type { ScanStatus } from '$lib/scanner';
   import { verifyPIN, saveSecret } from '$lib/storage';
   import { deriveAddresses } from '$lib/wallet';
-  import { playConfirmBeep } from '$lib/audio';
+  import { playConfirmBeep, unlockAudio } from '$lib/audio';
   import Panel from './Panel.svelte';
   import MnemonicGrid from './MnemonicGrid.svelte';
   import PinInput from './PinInput.svelte';
@@ -234,6 +234,7 @@
   }
 
   async function startCamera() {
+    unlockAudio();
     scanner = new QRScanner({
       onScan: handleScan,
       onError: (msg) => { error = msg; },
@@ -351,6 +352,7 @@
   }
 
   async function handleFileUpload(e: Event) {
+    unlockAudio();
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) {
