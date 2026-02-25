@@ -359,9 +359,11 @@
 <style>
   body { font-family: 'Courier New', monospace; color: #000; background: #fff; margin: 0; padding: 2cm; }
   .vault-backup { width: 100%; max-width: 800px; margin: 0 auto; }
-  .header { border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 20px; }
+  .header { border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .header-left { flex: 1; }
   .title { font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
   .subtitle { font-size: 10px; color: #666; margin-top: 4px; }
+  .header-version { font-size: 10px; color: #666; white-space: nowrap; }
   .section { margin-bottom: 20px; }
   .section-label { font-weight: bold; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 8px; }
   .content { font-size: 11px; line-height: 1.5; }
@@ -379,8 +381,11 @@
 <body>
 <div class="vault-backup">
   <div class="header">
-    <div class="title">Vault Backup</div>
-    <div class="subtitle">Complete seed phrase and configuration</div>
+    <div class="header-left">
+      <div class="title">Shamir Secret Sharing Card</div>
+      <div class="subtitle">Vault Backup with Complete Seed Phrase</div>
+    </div>
+    <div class="header-version">v0.3.2</div>
   </div>
 
   <div class="section">

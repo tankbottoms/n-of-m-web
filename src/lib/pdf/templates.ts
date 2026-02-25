@@ -142,12 +142,12 @@ export function renderPageHTML(
 <meta charset="utf-8">
 ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></${''}script>` : ''}
 <style>
-  @page { margin: 10mm; size: portrait; }
+  @page { margin: 0; size: portrait; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Courier New', monospace; color: #000; font-size: ${layout.fontSize}px; line-height: 1.4; }
+  body { font-family: 'Courier New', monospace; color: #000; font-size: ${layout.fontSize}px; line-height: 1.4; margin: 0; padding: 0; }
 
-  /* Page container */
-  .page { page-break-after: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; }
+  /* Page container - full bleed to page edges */
+  .page { page-break-after: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; padding: 0; margin: 0; }
   .page:last-child { page-break-after: auto; }
 
   /* Full page: card fills the page */
