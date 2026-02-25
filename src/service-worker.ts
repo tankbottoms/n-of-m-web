@@ -35,16 +35,26 @@ sw.addEventListener('fetch', (event) => {
   // Skip cross-origin requests (CDN scripts like QRious, pdfjs)
   if (url.origin !== location.origin) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
-        // Cache successful responses for offline use
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      });
-    })
-  );
+  const isAsset = ASSETS.includes(url.pathname);
+
+  if (isAsset) {
+    // Cache-first for pre-cached build assets and static files
+    event.respondWith(
+      caches.match(event.request).then((cached) => cached || fetch(event.request))
+    );
+  } else {
+    // Network-first for navigation/HTML and other dynamic requests
+    // Prevents iOS Safari reload loop when SW version changes
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || Promise.reject('offline')))
+    );
+  }
 });
