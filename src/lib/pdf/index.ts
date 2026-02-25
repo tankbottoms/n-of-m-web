@@ -81,88 +81,84 @@ export function downloadHTML(html: string, filename: string): void {
 }
 
 export async function downloadPDF(html: string, filename: string): Promise<void> {
-  // Render HTML in an iframe so the full document (including <style> and @page)
-  // parses correctly. Then capture each .page element individually with html2canvas
-  // and compose a multi-page PDF with jsPDF. This avoids the @media screen overrides
-  // that break pagination when rendering via innerHTML in a div.
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.left = '-9999px';
-  iframe.style.top = '0';
-  iframe.style.width = '816px';
-  iframe.style.height = '1056px';
-  iframe.style.border = 'none';
-  iframe.style.opacity = '0';
+  // Use bundled html2canvas + jsPDF (no CDN, no iframe cross-document issues).
+  // Inject HTML via innerHTML (browser preserves <style> from <head>), add CSS
+  // overrides to counter @media screen rules, capture each .page individually.
+  const { default: html2canvas } = await import('html2canvas');
+  const { jsPDF } = await import('jspdf');
 
-  return new Promise<void>((resolve, reject) => {
-    iframe.onload = async () => {
-      try {
-        const iframeDoc = iframe.contentDocument;
-        if (!iframeDoc?.body) throw new Error('Cannot access iframe document');
+  const container = document.createElement('div');
+  container.innerHTML = html;
+  container.querySelectorAll('script').forEach(s => s.remove());
 
-        // Inject print-like overrides so pages render full-width (not 50% from @media screen)
-        const style = iframeDoc.createElement('style');
-        style.textContent = `
-          body { background: white !important; padding: 0 !important; }
-          .page { page-break-after: auto !important; min-height: auto !important;
-                   width: 100% !important; margin: 0 !important; padding-top: 0 !important; }
-          .page > .card { flex: none !important; }
-        `;
-        iframeDoc.head.appendChild(style);
+  // Override @media screen styles that break PDF rendering:
+  // - .page width: 50% → 100%
+  // - page-break-after: auto → always
+  // - card flex: none → 1 (fill page)
+  const overrideStyle = document.createElement('style');
+  overrideStyle.textContent = `
+    .page { width: 100% !important; margin: 0 !important; min-height: auto !important;
+            padding-top: 1cm !important; page-break-after: always !important; }
+    .page:first-child { padding-top: 0 !important; }
+    .page:last-child { page-break-after: auto !important; }
+    .page > .card { flex: 1 !important; }
+  `;
+  container.appendChild(overrideStyle);
 
-        const pages = iframeDoc.querySelectorAll('.page');
-        if (pages.length === 0) throw new Error('No .page elements found in HTML');
+  // Apply body-level styles (CSS body selectors won't match a div)
+  container.style.fontFamily = "'Courier New', monospace";
+  container.style.color = '#000';
+  container.style.lineHeight = '1.4';
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+  container.style.width = '816px';
+  container.style.background = 'white';
+  document.body.appendChild(container);
 
-        const { default: html2canvas } = await import('html2canvas');
-        const { jsPDF } = await import('jspdf');
+  try {
+    // Allow layout to compute
+    await new Promise(r => setTimeout(r, 100));
 
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const pdfW = pdf.internal.pageSize.getWidth();
-        const pdfH = pdf.internal.pageSize.getHeight();
-        const margin = 10; // mm
-        const contentW = pdfW - margin * 2;
-        const contentH = pdfH - margin * 2;
+    const pages = container.querySelectorAll('.page');
+    if (pages.length === 0) throw new Error('No .page elements found in HTML');
 
-        for (let i = 0; i < pages.length; i++) {
-          if (i > 0) pdf.addPage();
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+    const contentW = pdfW - margin * 2;
+    const contentH = pdfH - margin * 2;
 
-          const canvas = await html2canvas(pages[i] as HTMLElement, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            windowWidth: 816,
-          });
+    for (let i = 0; i < pages.length; i++) {
+      if (i > 0) pdf.addPage();
 
-          const imgData = canvas.toDataURL('image/png');
-          const ratio = canvas.width / canvas.height;
-          let imgW = contentW;
-          let imgH = imgW / ratio;
-          if (imgH > contentH) {
-            imgH = contentH;
-            imgW = imgH * ratio;
-          }
+      const canvas = await html2canvas(pages[i] as HTMLElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: 816,
+      });
 
-          pdf.addImage(imgData, 'PNG', margin, margin, imgW, imgH);
-        }
-
-        pdf.save(filename);
-        document.body.removeChild(iframe);
-        resolve();
-      } catch (e) {
-        console.error('[PDF] Failed to generate PDF:', e);
-        if (iframe.parentNode) document.body.removeChild(iframe);
-        reject(new Error('Failed to generate PDF: ' + (e instanceof Error ? e.message : String(e))));
+      const imgData = canvas.toDataURL('image/png');
+      const ratio = canvas.width / canvas.height;
+      let imgW = contentW;
+      let imgH = imgW / ratio;
+      if (imgH > contentH) {
+        imgH = contentH;
+        imgW = imgH * ratio;
       }
-    };
 
-    iframe.onerror = () => {
-      if (iframe.parentNode) document.body.removeChild(iframe);
-      reject(new Error('Failed to load PDF iframe'));
-    };
+      pdf.addImage(imgData, 'PNG', margin, margin, imgW, imgH);
+    }
 
-    iframe.srcdoc = html;
-    document.body.appendChild(iframe);
-  });
+    pdf.save(filename);
+    document.body.removeChild(container);
+  } catch (e) {
+    console.error('[PDF] Failed to generate PDF:', e);
+    if (container.parentNode) document.body.removeChild(container);
+    throw new Error('Failed to generate PDF: ' + (e instanceof Error ? e.message : String(e)));
+  }
 }
 
 export async function downloadHTMLAsImage(html: string, filename: string): Promise<void> {
