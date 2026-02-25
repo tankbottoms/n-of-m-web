@@ -427,7 +427,7 @@
               </p>
               <div class="confirm-passphrase-display">
                 <span class="confirm-value">{confirmPassphraseVisible ? passphrase : '*'.repeat(passphrase.length)}</span>
-                <button class="input-toggle-btn" onclick={() => { confirmPassphraseVisible = !confirmPassphraseVisible; }} type="button">
+                <button class="input-toggle-btn" onclick={() => { confirmPassphraseVisible = !confirmPassphraseVisible; }} type="button" aria-label={confirmPassphraseVisible ? 'Hide passphrase' : 'Show passphrase'}>
                   <i class="fa-thin {confirmPassphraseVisible ? 'fa-eye-slash' : 'fa-eye'}"></i>
                 </button>
               </div>
@@ -703,11 +703,6 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
-  }
-  .layout-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
   }
   .share-cards-grid {
     display: flex;

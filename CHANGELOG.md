@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- **HTML Upload Parsing**: Fixed share extraction from exported HTML files -- QRious regex failed on derivation paths containing single quotes; added embedded `shareData` array to all HTML exports as primary extraction path
+
 ## [0.3.3] - 2026-02-24
 
 ### Added

@@ -3,6 +3,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [sveltekit()],
+  build: {
+    chunkSizeWarningLimit: 700,
+  },
   define: {
     global: 'globalThis',
   },

@@ -765,6 +765,7 @@ var vaultData = ${JSON.stringify(exportData)};
                     <!-- JSON Password Dialog -->
                     <h4 class="text-xs text-muted mb-sm">SET EXPORT PASSWORD</h4>
                     <p class="text-xs text-muted mb-md">This password will encrypt your seed phrase. Keep it safe.</p>
+                    <!-- svelte-ignore a11y_autofocus -->
                     <input
                       type="password"
                       bind:value={exportPassword}

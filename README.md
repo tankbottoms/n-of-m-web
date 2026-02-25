@@ -10,34 +10,45 @@ Shamir's Secret Sharing for Seed Phrases. Split. Print. Recover.
 
 ## Features
 
-- **Generate** - Create 12/15/18/21/24-word seed phrases with system CSPRNG or mouse entropy
-- **Split** - Shamir's Secret Sharing over GF(2^8), configurable threshold and total shares
-- **Print** - Full-page layout with 80% QR code size optimized for scannability
-- **Export** - Multiple formats: HTML, PDF, and Vault Backup (HTML with embedded QR)
-- **Scan** - Camera or file-based QR scanning with jsQR fallback for reliability
-- **Vault** - AES-256-GCM encrypted IndexedDB storage with optional password protection
-- **Derive** - BIP44 HD wallet address derivation (MetaMask, Ledger, custom paths)
-- **Offline** - Fully client-side SPA, no server, no API calls
+- **Generate** -- Create 12/15/18/21/24-word seed phrases with system CSPRNG or mouse entropy
+- **Split** -- Shamir's Secret Sharing over GF(2^8), configurable threshold and total shares
+- **Print** -- Full-page card layout with QR codes sized for reliable scanning
+- **Export** -- Share Cards (HTML, PDF) and Vault Backup (HTML, PNG)
+- **Scan** -- Camera or file-based QR scanning with jsQR fallback
+- **Recover** -- Upload exported HTML, PDF, JSON, or image files to reconstruct secrets
+- **Vault** -- AES-256-GCM encrypted IndexedDB storage with optional password protection
+- **Derive** -- BIP44 HD wallet address derivation (MetaMask, Ledger, custom paths)
+- **Offline** -- Fully client-side SPA, zero server dependencies
 
 ## Export Formats
 
 ### Share Cards
-- **HTML**: Printable full-page cards with embedded QR codes (pre-rendered for offline use)
-- **PDF**: Professional PDF documents with full-page layout, optimized for printing
-- **Use**: Scan individual share cards during recovery to reconstruct your secret
+
+Individual share cards for distribution and recovery.
+
+| Format | Description |
+|--------|-------------|
+| HTML | Printable cards with embedded QR codes and share data for offline use |
+| PDF | Print-ready documents, one full-page card per page |
 
 ### Vault Backup
-- **Vault Backup HTML**: Complete backup document with embedded QR code, instructions, and security warnings
-- **Contains**: Full seed phrase, all addresses, configuration, derivation path
-- **Use**: Store separately from share cards as an additional backup layer
-- **Note**: Cannot be scanned by share card scanner - use individual share cards for recovery
 
-### Features
-- All addresses included (not truncated)
-- Date/time stamps on all exports
-- Print-optimized CSS and formatting
-- Security information and usage instructions
-- QR codes optimized for scannability and print page fitting
+Complete secret backup for archival.
+
+| Format | Description |
+|--------|-------------|
+| HTML | Full backup document with QR code, addresses, and instructions |
+| PNG | Vault configuration as a single scannable QR code image |
+
+### Recovery
+
+All export formats can be uploaded in the Scan tab to recover shares:
+
+- HTML files (share cards and vault backups)
+- PDF exports
+- JSON vault exports
+- QR code images (PNG, JPG)
+- Live camera scanning of printed cards
 
 ## Cryptography
 
@@ -49,26 +60,6 @@ Shamir's Secret Sharing for Seed Phrases. Split. Print. Recover.
 | Wallet Derivation | BIP39/BIP44 via `ethers.js` |
 | Random | `crypto.getRandomValues()` CSPRNG |
 
-## Tech Stack
-
-- SvelteKit 2 + Svelte 5 (runes)
-- TypeScript
-- Vite 7
-- `@sveltejs/adapter-static` (fully static SPA)
-- QRious (QR generation)
-- jsQR (QR scanning)
-
-## Development
-
-```bash
-bun install
-bun run dev        # dev server on :5173
-bun run build      # production build to ./build
-bun run preview    # preview production build
-bun run test       # run unit tests
-bun run check      # svelte-check type checking
-```
-
 ## Security Model
 
 - All operations are client-side. No data leaves the browser.
@@ -76,6 +67,59 @@ bun run check      # svelte-check type checking
 - Vault entries are encrypted with AES-256-GCM before storage in IndexedDB.
 - Shamir shares individually reveal zero information about the secret.
 - PIN protection adds an additional encryption layer to share data.
+
+## Tech Stack
+
+- SvelteKit 2 + Svelte 5 (runes)
+- TypeScript
+- Vite 7
+- `@sveltejs/adapter-static` (fully static SPA)
+- QRious (QR generation), jsQR (QR scanning)
+- html2pdf.js (client-side PDF generation)
+
+## Development
+
+```bash
+bun install
+bun run dev          # dev server on :5173
+bun run build        # production build to ./build
+bun run preview      # preview production build
+bun run test         # run unit tests
+bun run check        # svelte-check type checking
+```
+
+## Project Structure
+
+```
+src/
+  components/        # Svelte 5 UI components
+    GenerateFlow     # 7-step mnemonic generation wizard
+    ScanFlow         # QR scanning and file upload recovery
+    VaultPanel       # Encrypted vault management and exports
+    SettingsPanel    # App settings and data management
+  lib/
+    crypto/          # AES-256-GCM encryption
+    entropy/         # Mouse-based entropy collection
+    pdf/             # HTML/PDF template rendering and layouts
+    scanner/         # QR code detection (camera + file)
+    shamir/          # GF(2^8) secret sharing implementation
+    storage/         # IndexedDB vault with encryption
+    wallet/          # BIP39/BIP44 HD wallet derivation
+scripts/
+  bundle-single-file # Standalone HTML bundler
+  e2e-test           # End-to-end test runner
+tests/               # Playwright integration tests
+```
+
+## Deployment
+
+Static site deployed to Vercel. Auto-deploys on push to `main`.
+
+```bash
+bun run build        # outputs to ./build
+```
+
+The build also produces `build/n-of-m-standalone.html`, a single self-contained HTML file with all assets inlined.
 
 ## License
 
