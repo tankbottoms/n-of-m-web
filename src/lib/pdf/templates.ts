@@ -113,10 +113,16 @@ export function renderPageHTML(
 ): string {
   const hasImages = qrImages.length > 0 && qrImages.every(img => img.length > 0);
 
-  // Full page: 1 card per page
+  // Full page: 1 card per page with title header
   const pages = shares.map((share, i) => {
     const card = renderCardHTML(share, qrDatas[i], highlightColor, layout, `card-${i}`, addresses, hasImages ? qrImages[i] : '');
-    return `<div class="page">${card}</div>`;
+    return `<div class="page">
+      <div class="page-title">
+        <div class="page-title-text">Shamir Secret Sharing Card</div>
+        <div class="page-title-version">v0.3.3</div>
+      </div>
+      ${card}
+    </div>`;
   });
 
   // Only include QRious CDN script when images aren't pre-rendered (downloadable HTML)
@@ -146,8 +152,14 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Courier New', monospace; color: #000; font-size: ${layout.fontSize}px; line-height: 1.4; }
 
+  /* Page title */
+  .page-title { text-align: center; padding-bottom: 0.5rem; margin-bottom: 1cm; }
+  .page-title-text { font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+  .page-title-version { font-size: 10px; color: #666; margin-top: 4px; }
+
   /* Page container */
-  .page { page-break-after: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; }
+  .page { page-break-after: always; width: 100%; min-height: 100vh; display: flex; flex-direction: column; padding-top: 1cm; }
+  .page:first-child { padding-top: 0; }
   .page:last-child { page-break-after: auto; }
 
   /* Full page: card fills the page */
@@ -173,7 +185,7 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
 
   /* Bottom section: QR + info side by side, stretches to fill remaining card space */
   .bottom-section { display: flex; flex-direction: row; gap: 12px; flex: 1; align-items: flex-start; }
-  .share-qr { border: 2px solid #000; padding: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: ${layout.qrSize + 12}px; height: ${layout.qrSize + 12}px; }
+  .share-qr { border: 2px solid #000; padding: 5em; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .share-qr canvas { display: block; }
   .share-qr img { display: block; image-rendering: pixelated; }
   .bottom-right { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
@@ -196,9 +208,9 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
   /* Screen preview */
   @media screen {
     body { background: #f0f0f0; padding: 2em 0; }
-    .page { page-break-after: auto; min-height: auto; width: 50%; margin: 0 auto; gap: 2em; }
-    .page > .card { flex: none; box-shadow: none; margin-bottom: 2em; }
-    .page > .card:last-child { margin-bottom: 0; }
+    .page { page-break-after: auto; min-height: auto; width: 50%; margin: 0 auto 1cm auto; padding-top: 0; }
+    .page:last-child { margin-bottom: 0; }
+    .page > .card { flex: none; box-shadow: none; }
   }
 
   @media print {
@@ -207,11 +219,6 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
 </style>
 </head>
 <body>
-<!-- Document header -->
-<div style="text-align: center; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 2px solid #000;">
-  <div style="font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Shamir Secret Sharing Card</div>
-  <div style="font-size: 10px; color: #666; margin-top: 4px;">v0.3.3</div>
-</div>
 ${pages.join('\n')}
 ${qrScripts ? `<script>\n${qrScripts}\n</${''}script>` : ''}
 </body>
