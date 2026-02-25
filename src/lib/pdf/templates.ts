@@ -210,7 +210,7 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
 <!-- Document header -->
 <div style="text-align: center; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 2px solid #000;">
   <div style="font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Shamir Secret Sharing Card</div>
-  <div style="font-size: 10px; color: #666; margin-top: 4px;">v0.3.2</div>
+  <div style="font-size: 10px; color: #666; margin-top: 4px;">v0.3.3</div>
 </div>
 ${pages.join('\n')}
 ${qrScripts ? `<script>\n${qrScripts}\n</${''}script>` : ''}

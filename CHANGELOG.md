@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-02-24
+
+### Added
+- **Vault Backup PNG Export**: New image export option alongside HTML for vault backups with same card formatting
+- **Title/Version Header**: Added document header to Share Cards exports with title and version information
+
+### Changed
+- **QR Code Size**: Increased from 168px to 252px (150% enlargement) for improved mobile/desktop scannability
+- **PDF Margins**: Standardized to 10mm on all sides for consistent print layout
+- **PDF Quality Settings**: Increased html2canvas scale to 2 and PNG quality to 0.98 for sharper mobile rendering
+
+### Fixed
+- **Mobile PDF Rendering**: Fixed blank page issue on mobile devices by setting explicit canvas dimensions and using PNG instead of JPEG
+- **Vault Address Alignment**: Fixed word wrapping of private keys on mobile by adding 2em left padding to address column
+- **JSON Export Modal**: Fixed password field auto-population issue - now accepts empty password input without dismissing modal
+- **Vault Backup Header**: Matches Share Cards export formatting with "SHAMIR SECRET SHARING CARD" title and version footer
+
 ## [0.3.2] - 2026-02-24
 
 ### Added
