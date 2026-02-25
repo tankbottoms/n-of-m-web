@@ -474,14 +474,14 @@ var vaultData = ${JSON.stringify(exportData)};
     a.click();
     URL.revokeObjectURL(url);
 
-    // Also download as PNG image for backup
-    try {
-      setTimeout(() => {
-        downloadHTMLAsImage(html, `${safeName}-vault-backup-${timestamp}.png`);
-      }, 500);
-    } catch (e) {
-      console.warn('Failed to generate PNG backup:', e);
-    }
+    // Also download as PNG image for backup (delay so HTML download triggers first)
+    setTimeout(async () => {
+      try {
+        await downloadHTMLAsImage(html, `${safeName}-vault-backup-${timestamp}.png`);
+      } catch (e) {
+        console.warn('Failed to generate PNG backup:', e);
+      }
+    }, 500);
 
     exportId = null;
   }

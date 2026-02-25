@@ -167,7 +167,8 @@ export async function downloadHTMLAsImage(html: string, filename: string): Promi
 
     const element = document.createElement('div');
     element.innerHTML = html;
-    element.style.position = 'fixed';
+    // Use position:absolute — position:fixed at -9999px causes html2canvas to clip
+    element.style.position = 'absolute';
     element.style.left = '-9999px';
     element.style.top = '0';
     element.style.width = '816px'; // 8.5in at 96dpi
@@ -176,10 +177,14 @@ export async function downloadHTMLAsImage(html: string, filename: string): Promi
     element.style.padding = '40px';
     document.body.appendChild(element);
 
+    // Allow layout to compute
+    await new Promise(r => setTimeout(r, 100));
+
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
-      logging: false
+      logging: false,
+      windowWidth: 816,
     });
 
     document.body.removeChild(element);
