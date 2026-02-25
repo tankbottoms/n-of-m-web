@@ -220,6 +220,7 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
 </head>
 <body>
 ${pages.join('\n')}
+<script>var shareData = ${JSON.stringify(qrDatas)};</${''}script>
 ${qrScripts ? `<script>\n${qrScripts}\n</${''}script>` : ''}
 </body>
 </html>`;

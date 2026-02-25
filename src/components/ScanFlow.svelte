@@ -226,12 +226,26 @@
       }
     }
 
-    // Match QRious constructor calls with the value parameter
-    // The value is typically a JSON-stringified object: value: '{"v":1,...}'
-    const qriousMatches = content.matchAll(/value:\s*(['"])([^"']*?(?:\\.[^"']*?)*)\1/g);
+    // Try shareData array (pre-rendered HTML exports)
+    const shareDataMatch = content.match(/var\s+shareData\s*=\s*(\[.*?\]);/s);
+    if (shareDataMatch) {
+      try {
+        const parsed: string[] = JSON.parse(shareDataMatch[1]);
+        for (const item of parsed) {
+          JSON.parse(item); // validate it's valid JSON
+          shares.push(item);
+        }
+      } catch (e) {
+        console.warn('[ScanFlow] Failed to parse shareData:', e);
+      }
+    }
+
+    // Fallback: match QRious constructor calls with the value parameter
+    // Uses a standard escaped-string regex that handles \" without excluding unescaped '
+    const qriousMatches = content.matchAll(/value:\s*"((?:[^"\\]|\\.)*)"/g);
 
     for (const match of qriousMatches) {
-      const shareData = match[2];
+      const shareData = match[1];
       // Unescape JSON string escapes
       try {
         const unescaped = shareData
