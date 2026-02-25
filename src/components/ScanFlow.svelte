@@ -3,7 +3,7 @@
   import { Buffer } from 'buffer';
   import type { SharePayload, SecretRecord, WordCount } from '$lib/types';
   import { combine } from '$lib/shamir';
-  import { QRScanner, scanFromFile, scanFromPDF } from '$lib/scanner';
+  import { QRScanner, scanFromFile, scanFromDataURI, scanFromPDF } from '$lib/scanner';
   import type { ScanStatus } from '$lib/scanner';
   import { verifyPIN, saveSecret } from '$lib/storage';
   import { deriveAddresses } from '$lib/wallet';
@@ -14,7 +14,7 @@
 
   let { onComplete }: { onComplete: () => void } = $props();
 
-  let state = $state<'scanning' | 'pin_required' | 'reconstructing' | 'done' | 'error'>('scanning');
+  let state = $state<'scanning' | 'pin_required' | 'password_required' | 'reconstructing' | 'done' | 'error'>('scanning');
   let scannedShares = $state<SharePayload[]>([]);
   let targetThreshold = $state(0);
   let targetTotal = $state(0);
@@ -25,6 +25,11 @@
   let masked = $state(true);
   let pin = $state('');
   let vaultSaved = $state(false);
+
+  // Encrypted JSON import state
+  let encryptedPayload = $state<{ ciphertext: string; iv: string; salt: string } | null>(null);
+  let importPassword = $state('');
+  let importPasswordError = $state('');
   let scanner: QRScanner | null = null;
   // svelte-ignore non_reactive_update
   let videoEl: HTMLVideoElement;
@@ -182,6 +187,52 @@
     }
   }
 
+  async function decryptJSON(ciphertext: string, iv: string, salt: string, password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const saltBytes = new Uint8Array(salt.match(/.{2}/g)!.map(b => parseInt(b, 16)));
+    const ivBytes = new Uint8Array(iv.match(/.{2}/g)!.map(b => parseInt(b, 16)));
+    const ciphertextBytes = new Uint8Array(ciphertext.match(/.{2}/g)!.map(b => parseInt(b, 16)));
+    const key = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: saltBytes, hash: 'SHA-256', iterations: 100000 },
+      await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']),
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: ivBytes },
+      key,
+      ciphertextBytes
+    );
+    return decoder.decode(plaintext);
+  }
+
+  async function handlePasswordSubmit() {
+    if (!importPassword || !encryptedPayload) return;
+    importPasswordError = '';
+    try {
+      const plaintext = await decryptJSON(
+        encryptedPayload.ciphertext,
+        encryptedPayload.iv,
+        encryptedPayload.salt,
+        importPassword
+      );
+      const vaultData = JSON.parse(plaintext);
+      if (vaultData.mnemonic) {
+        playConfirmBeep();
+        recoveredMnemonic = vaultData.mnemonic;
+        state = 'done';
+        await autoSaveToVault();
+      } else {
+        importPasswordError = 'Decrypted data does not contain a mnemonic';
+      }
+    } catch {
+      importPasswordError = 'Incorrect password or corrupted file';
+      importPassword = '';
+    }
+  }
+
   async function startCamera() {
     scanner = new QRScanner({
       onScan: handleScan,
@@ -261,6 +312,35 @@
         console.warn('[ScanFlow] Invalid share data in HTML:', e);
       }
     }
+
+    // Fallback: scan QR codes from embedded data:image URIs (pre-rendered exports)
+    if (shares.length === 0 && !vaultData) {
+      const imgMatches = content.matchAll(/src="(data:image\/[^"]+)"/g);
+      const dataURIs: string[] = [];
+      for (const m of imgMatches) {
+        dataURIs.push(m[1]);
+      }
+      if (dataURIs.length > 0) {
+        console.log(`[ScanFlow] No script data found, scanning ${dataURIs.length} embedded QR images`);
+        for (const uri of dataURIs) {
+          try {
+            const results = await scanFromDataURI(uri);
+            for (const data of results) {
+              try {
+                JSON.parse(data); // validate JSON
+                shares.push(data);
+              } catch {
+                // Not valid share JSON
+              }
+            }
+          } catch (e) {
+            console.warn('[ScanFlow] Failed to scan embedded QR:', e);
+          }
+        }
+        console.log(`[ScanFlow] Scanned ${shares.length} shares from embedded images`);
+      }
+    }
+
     return { shares, vault: vaultData };
   }
 
@@ -353,7 +433,14 @@
           clearInterval(animationInterval);
           scanAnimationFrame = 0;
 
-          if (vaultData.mnemonic) {
+          if (vaultData.v === 1 && vaultData.ciphertext && vaultData.iv && vaultData.salt) {
+            // Encrypted JSON export - prompt for password
+            uploadStatus = null;
+            encryptedPayload = { ciphertext: vaultData.ciphertext, iv: vaultData.iv, salt: vaultData.salt };
+            importPassword = '';
+            importPasswordError = '';
+            state = 'password_required';
+          } else if (vaultData.mnemonic) {
             // Direct mnemonic - auto-reconstruct
             uploadStatus = 'Vault data loaded. Reconstructing...';
             playConfirmBeep();
@@ -486,6 +573,9 @@
     error = null;
     recoveredMnemonic = '';
     pin = '';
+    encryptedPayload = null;
+    importPassword = '';
+    importPasswordError = '';
     state = 'scanning';
     scanStatus = 'idle';
     stopCamera();
@@ -536,6 +626,10 @@
           <div class="format-item">
             <span class="format-icon"><i class="fa-thin fa-qrcode"></i></span>
             <span class="format-label"><strong>Vault QR Code</strong> - Complete vault configuration as PNG or image</span>
+          </div>
+          <div class="format-item">
+            <span class="format-icon"><i class="fa-thin fa-lock"></i></span>
+            <span class="format-label"><strong>Encrypted JSON</strong> - Password-protected vault export (AES-256-GCM)</span>
           </div>
         </div>
         <div class="formats-warning">
@@ -657,6 +751,29 @@
       {#if error}
         <p class="text-xs mt-sm" style="color: var(--color-error);">{error}</p>
       {/if}
+    </div>
+  </Panel>
+
+{:else if state === 'password_required'}
+  <Panel title="Password Required">
+    <div class="password-content">
+      <p class="text-sm mb-md">This export is password-protected. Enter the password used during export.</p>
+      <div class="password-input-group">
+        <input
+          type="password"
+          bind:value={importPassword}
+          placeholder="Enter export password"
+          class="password-field"
+          onkeydown={(e) => { if (e.key === 'Enter') handlePasswordSubmit(); }}
+        />
+        <button class="primary" onclick={handlePasswordSubmit} disabled={!importPassword}>
+          <i class="fa-thin fa-lock-open"></i> Decrypt
+        </button>
+      </div>
+      {#if importPasswordError}
+        <p class="text-xs mt-sm" style="color: var(--color-error);">{importPasswordError}</p>
+      {/if}
+      <button class="mt-md" onclick={reset}><i class="fa-thin fa-rotate-left"></i> Cancel</button>
     </div>
   </Panel>
 
@@ -1049,5 +1166,27 @@
     color: #333;
     pointer-events: none;
     text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+  }
+
+  .password-content {
+    padding: 0.5rem 0;
+  }
+  .password-input-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .password-field {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+  .password-field:focus {
+    outline: none;
+    border-color: var(--color-accent);
   }
 </style>

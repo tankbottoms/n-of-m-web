@@ -81,16 +81,16 @@ export function downloadHTML(html: string, filename: string): void {
 }
 
 export async function downloadPDF(html: string, filename: string): Promise<void> {
+  const element = document.createElement('div');
+  element.innerHTML = html;
+  element.style.position = 'fixed';
+  element.style.left = '-9999px';
+  element.style.width = '816px'; // 8.5in at 96dpi for A4 portrait
+  element.style.background = 'white';
+  document.body.appendChild(element);
+
   try {
     const html2pdf = (await import('html2pdf.js')).default;
-
-    const element = document.createElement('div');
-    element.innerHTML = html;
-    element.style.position = 'fixed';
-    element.style.left = '-9999px';
-    element.style.width = '816px'; // 8.5in at 96dpi for A4 portrait
-    element.style.background = 'white';
-    document.body.appendChild(element);
 
     const opt = {
       margin: 10,
@@ -105,8 +105,8 @@ export async function downloadPDF(html: string, filename: string): Promise<void>
     document.body.removeChild(element);
   } catch (e) {
     console.error('[PDF] Failed to generate PDF:', e);
-    document.body.removeChild(element);
-    throw new Error('Failed to generate PDF');
+    if (element.parentNode) document.body.removeChild(element);
+    throw new Error('Failed to generate PDF: ' + (e instanceof Error ? e.message : String(e)));
   }
 }
 

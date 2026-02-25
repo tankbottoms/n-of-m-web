@@ -302,6 +302,7 @@
     exportPassword = '';
     exportPasswordConfirm = '';
     exportPasswordError = '';
+    exportFormatJSON = false;
     exportId = null;
   }
 

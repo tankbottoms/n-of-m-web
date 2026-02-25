@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  timeout: 120_000, // 2 min per test for QA battle tests
   fullyParallel: false,
   forbidOnly: false,
   retries: 0,
@@ -12,7 +13,7 @@ export default defineConfig({
     ['list'],
   ],
   use: {
-    baseURL: 'https://n-of-m-web.vercel.app',
+    baseURL: 'http://localhost:4173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -29,5 +30,10 @@ export default defineConfig({
     },
   ],
 
-  webServer: undefined, // Not testing local server, hitting Vercel
+  webServer: {
+    command: 'bun run preview --port 4173',
+    port: 4173,
+    reuseExistingServer: true,
+    timeout: 30_000,
+  },
 });

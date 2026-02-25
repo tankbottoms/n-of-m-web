@@ -394,6 +394,23 @@ function scanAllQRCodes(canvas: HTMLCanvasElement, _ctx: CanvasRenderingContext2
   return found;
 }
 
+export async function scanFromDataURI(dataURI: string): Promise<string[]> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve([]);
+      ctx.drawImage(img, 0, 0);
+      resolve(scanAllQRCodes(canvas, ctx));
+    };
+    img.onerror = () => resolve([]);
+    img.src = dataURI;
+  });
+}
+
 export async function scanFromFile(file: File): Promise<string[]> {
   return new Promise((resolve) => {
     const objectUrl = URL.createObjectURL(file);
