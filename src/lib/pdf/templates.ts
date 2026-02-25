@@ -1,5 +1,6 @@
 import type { SharePayload, DerivedAddress } from '../types';
 import type { LayoutConfig } from './layouts';
+import { VERSION } from '../version';
 
 export function renderCardHTML(
   share: SharePayload,
@@ -32,7 +33,7 @@ export function renderCardHTML(
     <div class="card">
       <div class="header" style="background:${highlightColor};">
         <span class="header-title">${share.shareIndex}/${share.totalShares} SHAMIR</span>
-        <span class="header-meta">T:${share.threshold} &middot; ${share.wordCount}W &middot; V2</span>
+        <span class="header-meta">T:${share.threshold} &middot; ${share.wordCount}W &middot; ${VERSION}</span>
       </div>
       <div class="section">
         <div class="section-label">INSTRUCTIONS</div>
@@ -118,8 +119,8 @@ export function renderPageHTML(
     const card = renderCardHTML(share, qrDatas[i], highlightColor, layout, `card-${i}`, addresses, hasImages ? qrImages[i] : '');
     return `<div class="page">
       <div class="page-title">
-        <div class="page-title-text">Shamir Secret Sharing Card</div>
-        <div class="page-title-version">v0.3.3</div>
+        <div class="page-title-text">SHAMIR SECRET SHARING CARD</div>
+        <div class="page-title-version">${VERSION}</div>
       </div>
       ${card}
     </div>`;
@@ -185,9 +186,9 @@ ${needsScript ? `<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qri
 
   /* Bottom section: QR + info side by side, stretches to fill remaining card space */
   .bottom-section { display: flex; flex-direction: row; gap: 12px; flex: 1; align-items: flex-start; }
-  .share-qr { border: 2px solid #000; padding: 5em; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .share-qr canvas { display: block; }
-  .share-qr img { display: block; image-rendering: pixelated; }
+  .share-qr { border: 2px solid #000; padding: 2em; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .share-qr canvas { display: block; width: calc(100% - 1em); height: auto; }
+  .share-qr img { display: block; image-rendering: pixelated; width: calc(100% - 1em); height: auto; }
   .bottom-right { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
   .qr-info-top, .qr-info-bottom { font-size: ${layout.fontSize - 1}px; line-height: 1.4; }
   .qr-info-top { margin-bottom: 4px; }

@@ -327,8 +327,14 @@
             const results = await scanFromDataURI(uri);
             for (const data of results) {
               try {
-                JSON.parse(data); // validate JSON
-                shares.push(data);
+                const parsed = JSON.parse(data);
+                // Check if this is vault data (has mnemonic) rather than a share
+                if (parsed.mnemonic) {
+                  vaultData = parsed;
+                  console.log('[ScanFlow] Detected vault data from embedded QR image');
+                } else {
+                  shares.push(data);
+                }
               } catch {
                 // Not valid share JSON
               }
