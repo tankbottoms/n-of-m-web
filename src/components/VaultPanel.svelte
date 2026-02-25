@@ -315,15 +315,20 @@
   }
 
   async function exportFullPageLayout(secret: SecretRecord) {
-    await ensureQRious();
-    const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
-    const timestamp = datetimeStamp();
-    const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+    try {
+      await ensureQRious();
+      const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
+      const timestamp = datetimeStamp();
+      const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
 
-    // Generate full-page layout PDF with enlarged 150% QR codes for maximum scannability
-    const html = generatePrintHTML(shares, '#A8D8EA', 'full-page', secret.addresses);
-    await downloadPDF(html, `${safeName}-shares-${timestamp}.pdf`);
-
+      const html = generatePrintHTML(shares, '#A8D8EA', 'full-page', secret.addresses.slice(0, 5));
+      console.log('[VaultPanel] PDF export: generated HTML', html.length, 'chars,', shares.length, 'shares');
+      await downloadPDF(html, `${safeName}-shares-${timestamp}.pdf`);
+      console.log('[VaultPanel] PDF export: download complete');
+    } catch (e) {
+      console.error('[VaultPanel] PDF export failed:', e);
+      alert('PDF export failed: ' + (e instanceof Error ? e.message : String(e)));
+    }
     exportId = null;
   }
 
@@ -409,7 +414,7 @@
         <li>Keep this file secure. Store it separately from your share cards.</li>
         <li>To restore: Use the n-of-m app scanner or upload this file during recovery.</li>
         <li>If vault password is set, you will be prompted to enter it during import.</li>
-        <li>This backup is <strong>not scannable</strong> by the share card scanner. Use individual share cards for recovery.</li>
+        <li>This backup can be scanned but contains your <strong>complete secret</strong>. For safer recovery, use individual share cards instead.</li>
       </ol>
     </div>
   </div>
