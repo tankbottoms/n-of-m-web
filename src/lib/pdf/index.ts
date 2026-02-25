@@ -93,7 +93,7 @@ export async function downloadPDF(html: string, filename: string): Promise<void>
     document.body.appendChild(element);
 
     const opt = {
-      margin: 0,
+      margin: 10,
       filename: filename,
       image: { type: 'png', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 816 },
