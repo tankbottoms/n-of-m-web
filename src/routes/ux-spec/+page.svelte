@@ -255,10 +255,10 @@
     <h3>.theme-toggle</h3>
     <p class="text-sm text-muted">Fixed-position button (top-right) to toggle light/dark theme. From <code>ThemeToggle.svelte</code>.</p>
     <div class="example-box">
-      <button style="font-size: 1.1rem; padding: 0.4rem 0.5rem;">
+      <button style="font-size: 1.1rem; padding: 0.4rem 0.5rem;" aria-label="Dark mode">
         <i class="fa-thin fa-moon"></i>
       </button>
-      <button style="font-size: 1.1rem; padding: 0.4rem 0.5rem; margin-left: 0.5rem;">
+      <button style="font-size: 1.1rem; padding: 0.4rem 0.5rem; margin-left: 0.5rem;" aria-label="Light mode">
         <i class="fa-thin fa-sun"></i>
       </button>
     </div>
@@ -632,12 +632,12 @@ input:focus, textarea:focus, select:focus &#123;
     <div class="example-box">
       <div style="display: flex; gap: var(--spacing-lg); flex-wrap: wrap;">
         <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-          <label class="text-xs text-muted">THRESHOLD (N)</label>
-          <input type="number" value={3} style="width: 80px;" />
+          <label class="text-xs text-muted" for="ux-threshold">THRESHOLD (N)</label>
+          <input id="ux-threshold" type="number" value={3} style="width: 80px;" />
         </div>
         <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-          <label class="text-xs text-muted">TOTAL SHARES (M)</label>
-          <input type="number" value={5} style="width: 80px;" />
+          <label class="text-xs text-muted" for="ux-total-shares">TOTAL SHARES (M)</label>
+          <input id="ux-total-shares" type="number" value={5} style="width: 80px;" />
         </div>
       </div>
     </div>
@@ -648,6 +648,7 @@ input:focus, textarea:focus, select:focus &#123;
       <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
         {#each ['#A8D8EA', '#FFB7B2', '#FFDAC1', '#B5EAD7', '#C7CEEA', '#E2F0CB', '#F8E6E0', '#D5C4F8'] as color, i}
           <button
+            aria-label="Select color {color}"
             style="width: 32px; height: 32px; background: {color}; border: 2px solid {i === 0 ? 'var(--color-border-dark)' : 'var(--color-border)'}; padding: 0; min-width: 0; box-shadow: {i === 0 ? '3px 3px 0px var(--color-shadow)' : '1px 1px 0px var(--color-shadow)'}; {i === 0 ? 'transform: translate(-1px, -1px);' : ''}"
           ></button>
         {/each}
@@ -919,7 +920,7 @@ input:focus, textarea:focus, select:focus &#123;
       <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
         <button class="primary" style="min-width: 140px; text-align: left;"><i class="fa-thin fa-file"></i> Full Page</button>
         <span class="text-xs text-muted" style="flex: 1;">One card per page, 80% QR code</span>
-        <button style="background: none; border: none; box-shadow: none; padding: 0.3rem; font-size: 0.9rem; color: var(--color-text-muted);"><i class="fa-thin fa-download"></i></button>
+        <button aria-label="Download layout" style="background: none; border: none; box-shadow: none; padding: 0.3rem; font-size: 0.9rem; color: var(--color-text-muted);"><i class="fa-thin fa-download"></i></button>
       </div>
     </div>
 

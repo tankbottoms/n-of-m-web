@@ -15,7 +15,6 @@ export class QRScanner {
   private config: ScannerConfig;
   private cooldown = false;
   private decodeErrorCount = 0;
-  private lastErrorLogTime = 0;
   private fallbackInterval: ReturnType<typeof setInterval> | null = null;
   private fallbackFrameCount = 0;
   private displayFrameId: ReturnType<typeof requestAnimationFrame> | null = null;
@@ -51,7 +50,7 @@ export class QRScanner {
           this.decodeErrorCount++;
           // Log every 100 frames to show we're getting video data but not finding QR codes
           if (this.decodeErrorCount % 100 === 0) {
-            console.log(`[QRScanner] Processed ${this.decodeErrorCount} frames, no QR found. Last error:`, error?.message || error);
+            console.log(`[QRScanner] Processed ${this.decodeErrorCount} frames, no QR found. Last error:`, typeof error === 'string' ? error : error?.message);
           }
         },
         preferredCamera: 'environment',
@@ -71,7 +70,6 @@ export class QRScanner {
       console.log('[QRScanner] Video element paused:', videoElement.paused);
       console.log('[QRScanner] Scanner is running and listening for QR codes...');
       this.decodeErrorCount = 0;
-      this.lastErrorLogTime = Date.now();
 
       // Explicitly ensure video is playing (iOS Safari workaround)
       if (videoElement.paused) {

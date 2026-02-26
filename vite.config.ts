@@ -20,6 +20,7 @@ export default defineConfig({
   ssr: {
     external: ['buffer'],
   },
+  // @ts-expect-error vitest injects test config at runtime
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',

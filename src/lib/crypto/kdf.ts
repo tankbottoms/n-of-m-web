@@ -13,7 +13,7 @@ export async function deriveKey(pin: string, salt: string): Promise<string> {
   const derivedBits = await crypto.subtle.deriveBits(
     {
       name: 'PBKDF2',
-      salt: hexToBytes(salt),
+      salt: hexToBytes(salt) as BufferSource,
       iterations: KDF_ITERATIONS,
       hash: 'SHA-256',
     },

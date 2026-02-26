@@ -134,13 +134,13 @@ export async function downloadPDF(html: string, filename: string): Promise<void>
       if (i > 0) pdf.addPage();
 
       const canvas = await html2canvas(pages[i] as HTMLElement, {
-        scale: 1,
+        scale: 3,
         useCORS: true,
         logging: false,
         windowWidth: 816,
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const imgData = canvas.toDataURL('image/png');
       const ratio = canvas.width / canvas.height;
       let imgW = contentW;
       let imgH = imgW / ratio;
@@ -149,7 +149,7 @@ export async function downloadPDF(html: string, filename: string): Promise<void>
         imgW = imgH * ratio;
       }
 
-      pdf.addImage(imgData, 'JPEG', margin, margin, imgW, imgH);
+      pdf.addImage(imgData, 'PNG', margin, margin, imgW, imgH);
     }
 
     pdf.save(filename);

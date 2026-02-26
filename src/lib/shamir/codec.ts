@@ -138,7 +138,7 @@ function encode(id: string, data: string | Buffer): Buffer {
   return Buffer.concat([header, dataBuffer]);
 }
 
-function decode(buffer: string | Buffer, encoding?: BufferEncoding): Buffer {
+function decode(buffer: string | Buffer, encoding?: 'ascii' | 'utf8' | 'utf-8' | 'utf16le' | 'ucs2' | 'ucs-2' | 'base64' | 'base64url' | 'latin1' | 'binary' | 'hex'): Buffer {
   const padding = 2 * BYTES_PER_CHARACTER;
   const offset = padding;
   const chunks: number[] = [];

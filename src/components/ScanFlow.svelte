@@ -14,7 +14,7 @@
 
   let { onComplete }: { onComplete: () => void } = $props();
 
-  let state = $state<'scanning' | 'pin_required' | 'password_required' | 'reconstructing' | 'done' | 'error'>('scanning');
+  let phase = $state<'scanning' | 'pin_required' | 'password_required' | 'reconstructing' | 'done' | 'error'>('scanning');
   let scannedShares = $state<SharePayload[]>([]);
   let targetThreshold = $state(0);
   let targetTotal = $state(0);
@@ -75,12 +75,12 @@
   }
 
   function handleScan(data: string): boolean {
-    if (state !== 'scanning') return false;
+    if (phase !== 'scanning') return false;
     try {
       const payload: SharePayload = JSON.parse(data);
 
       // Check if this is a vault QR code (full secret data) instead of a share
-      if (!payload.shareData && payload.mnemonic) {
+      if (!payload.shareData && (payload as unknown as Record<string, unknown>).mnemonic) {
         error = 'This is a vault backup QR code, not a share card. Please scan individual share cards instead.';
         return false;
       }
@@ -115,9 +115,9 @@
         stopGuidanceTimer();
 
         if (payload.hasPIN) {
-          state = 'pin_required';
+          phase = 'pin_required';
         } else {
-          state = 'reconstructing';
+          phase = 'reconstructing';
           reconstruct();
         }
       }
@@ -129,16 +129,16 @@
   }
 
   async function reconstruct() {
-    state = 'reconstructing';
+    phase = 'reconstructing';
     try {
       const rawShares = scannedShares.map(s => s.shareData);
       const recovered = combine(rawShares);
       recoveredMnemonic = recovered.toString('utf-8');
-      state = 'done';
+      phase = 'done';
       await autoSaveToVault();
     } catch (e) {
       error = 'Failed to reconstruct secret. Shares may be incompatible.';
-      state = 'error';
+      phase = 'error';
     }
   }
 
@@ -222,7 +222,7 @@
       if (vaultData.mnemonic) {
         playConfirmBeep();
         recoveredMnemonic = vaultData.mnemonic;
-        state = 'done';
+        phase = 'done';
         await autoSaveToVault();
       } else {
         importPasswordError = 'Decrypted data does not contain a mnemonic';
@@ -447,13 +447,13 @@
             encryptedPayload = { ciphertext: vaultData.ciphertext, iv: vaultData.iv, salt: vaultData.salt };
             importPassword = '';
             importPasswordError = '';
-            state = 'password_required';
+            phase = 'password_required';
           } else if (vaultData.mnemonic) {
             // Direct mnemonic - auto-reconstruct
             uploadStatus = 'Vault data loaded. Reconstructing...';
             playConfirmBeep();
             recoveredMnemonic = vaultData.mnemonic;
-            state = 'done';
+            phase = 'done';
             await autoSaveToVault();
           } else if (vaultData.shares && Array.isArray(vaultData.shares)) {
             // Share data - process each share
@@ -492,7 +492,7 @@
           uploadStatus = 'Complete vault data found. Reconstructing...';
           playConfirmBeep();
           recoveredMnemonic = vault.mnemonic;
-          state = 'done';
+          phase = 'done';
           await autoSaveToVault();
         } else if (shares.length === 0) {
           error = 'No share data or vault data found in HTML file';
@@ -534,7 +534,7 @@
                 uploadStatus = 'Vault data found. Reconstructing...';
                 playConfirmBeep();
                 recoveredMnemonic = vaultData.mnemonic;
-                state = 'done';
+                phase = 'done';
                 await autoSaveToVault();
                 return;
               }
@@ -568,7 +568,7 @@
     targetTotal = 0;
     targetId = '';
     error = null;
-    state = 'scanning';
+    phase = 'scanning';
     scanStatus = 'idle';
     console.log('[ScanFlow] Cleared matches, ready for new share set');
   }
@@ -584,7 +584,7 @@
     encryptedPayload = null;
     importPassword = '';
     importPasswordError = '';
-    state = 'scanning';
+    phase = 'scanning';
     scanStatus = 'idle';
     stopCamera();
   }
@@ -595,7 +595,7 @@
   });
 </script>
 
-{#if state === 'scanning'}
+{#if phase === 'scanning'}
   <Panel title="Scan Share Cards">
     <div class="scan-content">
       <div class="step-instructions mb-md">
@@ -751,7 +751,7 @@
     </div>
   </Panel>
 
-{:else if state === 'pin_required'}
+{:else if phase === 'pin_required'}
   <Panel title="PIN Required">
     <div class="pin-content">
       <p class="text-sm mb-md">This secret is PIN-protected. Enter the PIN to reconstruct.</p>
@@ -762,7 +762,7 @@
     </div>
   </Panel>
 
-{:else if state === 'password_required'}
+{:else if phase === 'password_required'}
   <Panel title="Password Required">
     <div class="password-content">
       <p class="text-sm mb-md">This export is password-protected. Enter the password used during export.</p>
@@ -785,12 +785,12 @@
     </div>
   </Panel>
 
-{:else if state === 'reconstructing'}
+{:else if phase === 'reconstructing'}
   <Panel title="Reconstructing...">
     <p class="text-muted">Combining shares with Lagrange interpolation...</p>
   </Panel>
 
-{:else if state === 'done'}
+{:else if phase === 'done'}
   <Panel title="Secret Recovered">
     <div class="recovered-content">
       <div class="mnemonic-controls mb-md">
@@ -814,7 +814,7 @@
     </div>
   </Panel>
 
-{:else if state === 'error'}
+{:else if phase === 'error'}
   <Panel title="Error">
     <p style="color: var(--color-error);">{error}</p>
     <button class="mt-md" onclick={reset}><i class="fa-thin fa-rotate"></i> Try Again</button>
