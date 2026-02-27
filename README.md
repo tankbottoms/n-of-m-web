@@ -2,7 +2,7 @@
 
 Shamir's Secret Sharing for Seed Phrases. Split. Print. Recover.
 
-**Live:** [n-of-m.vercel.app](https://n-of-m.vercel.app) (Vercel) | [n-of-m.pages.dev](https://n-of-m.pages.dev) (Cloudflare)
+**Live:** [n-of-m.vercel.app](https://n-of-m.vercel.app) (Vercel) | [n-of-m-web.pages.dev](https://n-of-m-web.pages.dev) (Cloudflare)
 
 ![Share Cards Preview](docs/screenshot.png)
 
@@ -137,13 +137,13 @@ bun run deploy:vercel          # manual deploy to Vercel
 
 ### Cloudflare Pages
 
-Deployed to [Cloudflare Pages](https://n-of-m.pages.dev) via Wrangler CLI.
+Deployed to [Cloudflare Pages](https://n-of-m-web.pages.dev) via Wrangler CLI.
 
 **First-time setup:**
 
 ```bash
 npx wrangler login                                           # authenticate (opens browser)
-npx wrangler pages project create n-of-m --production-branch main  # create project
+npx wrangler pages project create n-of-m-web --production-branch main  # create project
 ```
 
 **Deploy:**
