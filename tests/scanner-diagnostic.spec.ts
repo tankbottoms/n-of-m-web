@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://n-of-m-web.vercel.app';
-
 test('scanner diagnostic - detailed page analysis', async ({ page }) => {
   let allMessages: any[] = [];
 
@@ -34,7 +32,7 @@ test('scanner diagnostic - detailed page analysis', async ({ page }) => {
   console.log('=== DIAGNOSTIC TEST START ===\n');
 
   const startTime = Date.now();
-  await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+  await page.goto('/', { waitUntil: 'networkidle' });
   const loadTime = Date.now() - startTime;
   console.log(`[1] Page loaded in ${loadTime}ms`);
 
