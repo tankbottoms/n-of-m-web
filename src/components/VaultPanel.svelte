@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import type { SecretRecord, PathType, ShareSet, SharePayload } from '$lib/types';
   import { getAllSecrets, deleteSecret, updateSecret, hasVaultPassword, verifyVaultPassword, saveSecret } from '$lib/storage';
-  import { generatePrintHTML, printCards, downloadHTML, downloadPDF, downloadHTMLAsImage, datetimeStamp, ensureQRious, generateAllLayoutsHTML } from '$lib/pdf';
+  import { generatePrintHTML, printCards, downloadHTML, downloadPDF, downloadHTMLAsImage, datetimeStamp, generateAllLayoutsHTML } from '$lib/pdf';
   import type { LayoutType } from '$lib/pdf';
   import { split } from '$lib/shamir';
   import { deriveAddresses } from '$lib/wallet';
@@ -119,7 +119,7 @@
   }
 
   async function handleReprint(secret: SecretRecord) {
-    await ensureQRious();
+
     const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
     const html = generatePrintHTML(shares, '#A8D8EA', reprintLayout, secret.addresses.slice(0, 5));
     printCards(html);
@@ -186,7 +186,7 @@
   async function handleGenerateNewShares(secret: SecretRecord) {
     if (newSharesThreshold < 2 || newSharesTotal < newSharesThreshold) return;
 
-    await ensureQRious();
+
     const shares = buildSharePayloads(secret, newSharesThreshold, newSharesTotal);
     const html = generatePrintHTML(shares, '#A8D8EA', reprintLayout, secret.addresses.slice(0, 5));
     printCards(html);
@@ -307,7 +307,7 @@
   }
 
   async function exportAsQR(secret: SecretRecord) {
-    await ensureQRious();
+
     const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
     const html = generatePrintHTML(shares, '#A8D8EA', 'full-page', secret.addresses);
     downloadHTML(html, `${secret.name.replace(/[^a-zA-Z0-9-_]/g, '_')}-shares-${datetimeStamp()}.html`);
@@ -316,7 +316,7 @@
 
   async function exportFullPageLayout(secret: SecretRecord) {
     try {
-      await ensureQRious();
+  
       const shares = buildSharePayloads(secret, secret.shamirConfig.threshold, secret.shamirConfig.totalShares);
       const timestamp = datetimeStamp();
       const safeName = secret.name.replace(/[^a-zA-Z0-9-_]/g, '_');
@@ -333,7 +333,7 @@
   }
 
   async function exportAsQRImage(secret: SecretRecord) {
-    await ensureQRious();
+
     const exportData = {
       name: secret.name,
       createdAt: new Date(secret.createdAt).toISOString(),

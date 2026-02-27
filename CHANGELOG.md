@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Changed
+- **Standalone HTML**: Fully offline -- inlined Font Awesome CSS/fonts, QRious, and pdfjs-dist (no CDN dependencies)
+- **QRious**: Replaced CDN script injection with npm import across ShareCard, VaultPanel, and PDF modules
+- **pdfjs-dist**: Replaced CDN dynamic import with npm dependency for offline PDF scanning
+- **Bundle size**: Standalone HTML increased from ~1.4 MB to ~4.5 MB to include all dependencies
+
+### Removed
+- **Dead code**: Removed unused `scanWithUpscale()`, `startFallbackCanvasScanning()` from QR scanner
+- **CDN dependency**: Removed `ensureQRious()` global script loader
+
 ### Fixed
 - **HTML Upload Parsing**: Fixed share extraction from exported HTML files -- QRious regex failed on derivation paths containing single quotes; added embedded `shareData` array to all HTML exports as primary extraction path
 

@@ -2,6 +2,7 @@ import type { SharePayload, DerivedAddress } from '../types';
 import { renderPageHTML } from './templates';
 import { LAYOUTS } from './layouts';
 import type { LayoutType } from './layouts';
+import QRious from 'qrious';
 
 export { LAYOUTS } from './layouts';
 export type { LayoutType, LayoutConfig } from './layouts';
@@ -12,26 +13,12 @@ export function datetimeStamp(): string {
   return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
 }
 
-export function ensureQRious(): Promise<void> {
-  if ((window as any).QRious) return Promise.resolve();
-  return new Promise((resolve) => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js';
-    script.onload = () => resolve();
-    script.onerror = () => resolve();
-    document.head.appendChild(script);
-  });
-}
-
 function renderQRDataURI(data: string, size: number): string {
   try {
-    if ((window as any).QRious) {
-      const canvas = document.createElement('canvas');
-      // Render at higher resolution for sharp output; CSS scales to display size
-      const renderSize = Math.max(size * 2, 500);
-      new (window as any).QRious({ element: canvas, value: data, size: renderSize, level: 'H', padding: 0 });
-      return canvas.toDataURL('image/png');
-    }
+    const canvas = document.createElement('canvas');
+    const renderSize = Math.max(size * 2, 500);
+    new QRious({ element: canvas, value: data, size: renderSize, level: 'H', padding: 0 });
+    return canvas.toDataURL('image/png');
   } catch {}
   return '';
 }

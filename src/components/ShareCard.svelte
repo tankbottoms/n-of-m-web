@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { SharePayload, DerivedAddress } from '$lib/types';
+  import QRious from 'qrious';
 
   let { share, highlightColor = '#A8D8EA', addresses = [] }: {
     share: SharePayload;
@@ -16,33 +17,15 @@
   function renderQR(data: string, size: number): string {
     if (!data) return '';
     try {
-      if ((window as any).QRious) {
-        const canvas = document.createElement('canvas');
-        new (window as any).QRious({ element: canvas, value: data, size, level: 'H', padding: 0 });
-        return canvas.toDataURL('image/png');
-      }
+      const canvas = document.createElement('canvas');
+      new QRious({ element: canvas, value: data, size, level: 'H', padding: 0 });
+      return canvas.toDataURL('image/png');
     } catch {}
     return '';
   }
 
-  function generateQRs() {
+  $effect(() => {
     shareQrSrc = renderQR(JSON.stringify(share), 800);
-  }
-
-  $effect(() => {
-    if ((window as any).QRious) {
-      generateQRs();
-    }
-  });
-
-  // Load QRious if not already loaded
-  $effect(() => {
-    if (!(window as any).QRious) {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js';
-      s.onload = () => generateQRs();
-      document.head.appendChild(s);
-    }
   });
 </script>
 

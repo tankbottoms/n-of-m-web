@@ -1,5 +1,6 @@
 import QrScanner from 'qr-scanner';
 import jsQR from 'jsqr';
+import * as pdfjsLib from 'pdfjs-dist';
 
 export type ScanStatus = 'idle' | 'scanning' | 'detected';
 
@@ -15,8 +16,6 @@ export class QRScanner {
   private config: ScannerConfig;
   private cooldown = false;
   private decodeErrorCount = 0;
-  private fallbackInterval: ReturnType<typeof setInterval> | null = null;
-  private fallbackFrameCount = 0;
   private displayFrameId: ReturnType<typeof requestAnimationFrame> | null = null;
   private jsqrFallbackInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -188,61 +187,6 @@ export class QRScanner {
     }, 2000); // Every 2 seconds
   }
 
-  private startFallbackCanvasScanning(videoElement: HTMLVideoElement): void {
-    // Fallback for when qr-scanner's zxing doesn't detect codes
-    // ULTRA-MINIMAL: Only scan for QR codes at very low frequency
-    // NO display rendering - let browser handle video
-    let lastScanTime = 0;
-    const SCAN_INTERVAL = 500; // Scan only every 500ms (2 times per second)
-
-    console.log('[QRScanner] Starting fallback QR scanning (minimal)');
-
-    this.fallbackInterval = setInterval(() => {
-      this.fallbackFrameCount++;
-
-      try {
-        // Scan for QR codes at minimal frequency
-        const now = Date.now();
-        if (now - lastScanTime >= SCAN_INTERVAL) {
-          lastScanTime = now;
-
-          // Use actual video dimensions or fallback
-          const w = videoElement.videoWidth || 320;
-          const h = videoElement.videoHeight || 240;
-
-          const canvas = document.createElement('canvas');
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d', { willReadFrequently: true });
-          if (!ctx) return;
-
-          try {
-            ctx.drawImage(videoElement, 0, 0);
-          } catch (e) {
-            return; // Video not ready, skip
-          }
-
-          const codes = scanAllQRCodes(canvas, ctx);
-
-          for (const code of codes) {
-            if (code && !this.cooldown) {
-              console.log('[QRScanner] QR code detected!');
-              this.cooldown = true;
-              this.config.onStatusChange?.('detected');
-              const accepted = this.config.onScan(code);
-              setTimeout(() => {
-                this.cooldown = false;
-                this.config.onStatusChange?.('scanning');
-              }, accepted ? 1500 : 500);
-            }
-          }
-        }
-      } catch (e) {
-        // Silent
-      }
-    }, 500); // Run every 500ms
-  }
-
   stop(): void {
     console.log('[QRScanner] Stop called - cleaning up...');
     try {
@@ -255,11 +199,6 @@ export class QRScanner {
         console.log('[QRScanner] Clearing jsQR fallback interval');
         clearInterval(this.jsqrFallbackInterval);
         this.jsqrFallbackInterval = null;
-      }
-      if (this.fallbackInterval) {
-        console.log('[QRScanner] Clearing old fallback interval');
-        clearInterval(this.fallbackInterval);
-        this.fallbackInterval = null;
       }
       if (this.scanner) {
         console.log('[QRScanner] Destroying qr-scanner');
@@ -293,23 +232,6 @@ function scanOne(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): { da
     };
   }
   return null;
-}
-
-function scanWithUpscale(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): string | null {
-  // Try native resolution first
-  const result = scanOne(canvas, ctx);
-  if (result) return result.data;
-
-  // Fallback: 2x nearest-neighbor upscale
-  const upCanvas = document.createElement('canvas');
-  upCanvas.width = canvas.width * 2;
-  upCanvas.height = canvas.height * 2;
-  const upCtx = upCanvas.getContext('2d');
-  if (!upCtx) return null;
-  upCtx.imageSmoothingEnabled = false;
-  upCtx.drawImage(canvas, 0, 0, upCanvas.width, upCanvas.height);
-  const upResult = scanOne(upCanvas, upCtx);
-  return upResult?.data ?? null;
 }
 
 /** Scan a region of a canvas for a single QR code. */
@@ -433,9 +355,9 @@ export async function scanFromFile(file: File): Promise<string[]> {
 
 export async function scanFromPDF(file: File, onProgress?: (current: number, total: number, found: number) => void): Promise<string[]> {
   const arrayBuffer = await file.arrayBuffer();
-  // @ts-ignore -- CDN ESM import, no local type declarations
-  const pdfjsLib = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/+esm') as any;
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs';
+  // Disable worker to avoid cross-origin issues in standalone mode (file:// protocol).
+  // PDF parsing runs on main thread - slower but functional offline.
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const results: string[] = [];

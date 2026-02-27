@@ -15,7 +15,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['buffer'],
+    include: ['buffer', 'pdfjs-dist'],
   },
   ssr: {
     external: ['buffer'],
