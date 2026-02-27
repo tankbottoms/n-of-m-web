@@ -2,6 +2,8 @@
 
 Shamir's Secret Sharing for Seed Phrases. Split. Print. Recover.
 
+**Live:** [n-of-m.vercel.app](https://n-of-m.vercel.app) (Vercel) | [n-of-m.pages.dev](https://n-of-m.pages.dev) (Cloudflare)
+
 ![Share Cards Preview](docs/screenshot.png)
 
 ## Overview
