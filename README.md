@@ -113,13 +113,53 @@ tests/               # Playwright integration tests
 
 ## Deployment
 
-Static site deployed to Vercel. Auto-deploys on push to `main`.
+Fully static SPA with dual deployment targets. Both serve the same `build/` output.
+
+### Build
 
 ```bash
-bun run build        # outputs to ./build
+bun run build        # outputs to ./build + standalone HTML
 ```
 
-The build also produces `build/n-of-m-standalone.html`, a single self-contained HTML file with all assets inlined.
+The build produces:
+- `build/` -- static site ready for any hosting platform
+- `build/n-of-m-standalone.html` -- single self-contained HTML file with all assets inlined
+
+### Vercel
+
+Auto-deploys on push to `main` via GitHub integration.
+
+```bash
+bun run deploy:vercel          # manual deploy to Vercel
+```
+
+### Cloudflare Pages
+
+Deployed to [Cloudflare Pages](https://n-of-m.pages.dev) via Wrangler CLI.
+
+**First-time setup:**
+
+```bash
+npx wrangler login                                           # authenticate (opens browser)
+npx wrangler pages project create n-of-m --production-branch main  # create project
+```
+
+**Deploy:**
+
+```bash
+bun run deploy:cloudflare      # build + deploy to Cloudflare Pages
+```
+
+Requires `CLOUDFLARE_API_TOKEN` in environment for CI/non-interactive use.
+
+### Environment Variables
+
+| Variable | Required | Where | Purpose |
+|----------|----------|-------|---------|
+| `CLOUDFLARE_API_TOKEN` | Cloudflare CI | env / `.env` | Wrangler API authentication |
+| `VERCEL_TOKEN` | Vercel CI | env | Vercel CLI authentication |
+
+No server-side secrets are needed -- all cryptography runs client-side.
 
 ## License
 
