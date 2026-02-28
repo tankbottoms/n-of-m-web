@@ -18,6 +18,8 @@ jobs:
 
       - run: bun run -- vite build
 
+      - run: bun scripts/bundle-single-file.ts .svelte-kit/cloudflare
+
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

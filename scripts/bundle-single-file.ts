@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, resolve, dirname, relative, extname } from 'path';
 
-const BUILD_DIR = resolve(import.meta.dirname!, '..', 'build');
+const BUILD_DIR = resolve(process.argv[2] || join(import.meta.dirname!, '..', 'build'));
 const INDEX = join(BUILD_DIR, 'index.html');
 const OUTPUT = join(BUILD_DIR, 'n-of-m-standalone.html');
 
