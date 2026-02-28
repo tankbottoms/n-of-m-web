@@ -7,6 +7,12 @@ compatibility_flags = ["nodejs_compat"]
 enabled = true
 invocation_logs = true
 
+workers_dev = true
+
+routes = [
+  { pattern = "n-of-m.atsignhandle.xyz/*", zone_name = "atsignhandle.xyz" }
+]
+
 [assets]
 binding = "ASSETS"
 directory = ".svelte-kit/cloudflare"
