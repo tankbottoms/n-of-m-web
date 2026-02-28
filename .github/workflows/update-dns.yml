@@ -1,0 +1,62 @@
+name: Update DNS to Cloudflare Workers
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-dns:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get zone and record info
+        id: lookup
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          ZONE_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=atsignhandle.xyz" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" | jq -r '.result[0].id')
+          echo "zone_id=$ZONE_ID" >> "$GITHUB_OUTPUT"
+          echo "Zone ID: $ZONE_ID"
+
+          RECORD=$(curl -s "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?name=n-of-m.atsignhandle.xyz" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json")
+          echo "$RECORD" | jq '.result[]'
+
+          RECORD_ID=$(echo "$RECORD" | jq -r '.result[0].id // empty')
+          echo "record_id=$RECORD_ID" >> "$GITHUB_OUTPUT"
+          echo "Record ID: $RECORD_ID"
+
+      - name: Delete old Vercel CNAME (if exists)
+        if: steps.lookup.outputs.record_id != ''
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          ZONE_ID="${{ steps.lookup.outputs.zone_id }}"
+          RECORD_ID="${{ steps.lookup.outputs.record_id }}"
+          curl -s -X DELETE \
+            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$RECORD_ID" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" | jq .
+
+      - name: Create CNAME to Workers
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          ZONE_ID="${{ steps.lookup.outputs.zone_id }}"
+          curl -s -X POST \
+            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "type": "CNAME",
+              "name": "n-of-m",
+              "content": "n-of-m.atsignhandle.workers.dev",
+              "proxied": true
+            }' | jq .
+
+      - name: Verify DNS
+        run: |
+          sleep 5
+          dig CNAME n-of-m.atsignhandle.xyz +short
+          curl -sI "https://n-of-m.atsignhandle.xyz/privacy" | head -10
