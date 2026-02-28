@@ -40,6 +40,16 @@
     </button>
   </div>
 
+  <div class="hero-links mt-sm">
+    <a href="/docs" class="hero-link"><i class="fa-thin fa-book"></i> Docs</a>
+    <span class="hero-link-sep">&middot;</span>
+    <a href="/ios" class="hero-link"><i class="fa-thin fa-mobile"></i> iOS App</a>
+    <span class="hero-link-sep">&middot;</span>
+    <a href="/ux-spec" class="hero-link"><i class="fa-thin fa-palette"></i> UX Spec</a>
+    <span class="hero-link-sep">&middot;</span>
+    <a href="https://github.com/tankbottoms/n-of-m-web" target="_blank" rel="noopener" class="hero-link"><i class="fa-thin fa-code-branch"></i> Source</a>
+  </div>
+
   {#if showExplainer}
     <div class="explainer mt-sm">
       <div class="explainer-section">
@@ -134,6 +144,31 @@
     margin-left: auto;
     margin-right: auto;
   }
+  .hero-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+  }
+  .hero-link {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  .hero-link:hover {
+    color: var(--color-link);
+  }
+  .hero-link i {
+    margin-right: 0.15rem;
+  }
+  .hero-link-sep {
+    color: var(--color-border);
+    font-size: 0.6rem;
+  }
+
   .explainer-toggle {
     text-align: center;
   }
