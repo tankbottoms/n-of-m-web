@@ -462,7 +462,6 @@
 
   .comparison-card {
     border: 1px solid var(--color-border);
-    box-shadow: 2px 2px 0px var(--color-shadow);
   }
 
   .comparison-header {
@@ -517,7 +516,6 @@
   .feature-card {
     border: 1px solid var(--color-border);
     padding: var(--spacing-md);
-    box-shadow: 2px 2px 0px var(--color-shadow);
   }
 
   .feature-card .feature-icon {
@@ -551,7 +549,6 @@
     gap: var(--spacing-md);
     border: 1px solid var(--color-border);
     padding: var(--spacing-md);
-    box-shadow: 2px 2px 0px var(--color-shadow);
   }
 
   .step-number {
@@ -668,7 +665,6 @@
     display: flex;
     flex-direction: column;
     border: 1px solid var(--color-border);
-    box-shadow: 2px 2px 0px var(--color-shadow);
   }
 
   .req-item {
@@ -705,7 +701,6 @@
     text-align: center;
     border: 1px solid var(--color-border);
     padding: var(--spacing-xl);
-    box-shadow: 2px 2px 0px var(--color-shadow);
   }
 
   .cta-box h2 {
