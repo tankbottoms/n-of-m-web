@@ -331,6 +331,10 @@
 
       <div class="mt-md about-links">
         <p class="text-xs">
+          <a href="/docs">
+            <i class="fa-thin fa-book"></i> Documentation
+          </a>
+          &middot;
           <a href="https://github.com/tankbottoms/n-of-m-web" target="_blank" rel="noopener">
             <i class="fa-thin fa-code-branch"></i> Source on GitHub
           </a>

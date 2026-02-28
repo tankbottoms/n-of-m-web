@@ -10,6 +10,7 @@
   import { Buffer } from 'buffer';
   import { v4 as uuid } from 'uuid';
   import { verifyPIN } from '$lib/storage';
+  import QRious from 'qrious';
   import Panel from './Panel.svelte';
   import MnemonicGrid from './MnemonicGrid.svelte';
   import AddressTable from './AddressTable.svelte';
@@ -349,7 +350,7 @@
     };
     const json = JSON.stringify(exportData);
     const canvas = document.createElement('canvas');
-    new (window as any).QRious({ element: canvas, value: json, size: 1024, level: 'L', padding: 16 });
+    new QRious({ element: canvas, value: json, size: 1024, level: 'L', padding: 16 });
     const qrDataURL = canvas.toDataURL('image/png');
 
     // Create formatted document with instructions

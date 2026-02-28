@@ -24,6 +24,7 @@
     "jsqr": "^1.4.0",
     "pdfjs-dist": "^4.0.379",
     "qr-scanner": "^1.4.2",
+    "qrcode-generator": "^2.0.4",
     "qrious": "^4.0.2",
     "svelte": "^5.53.0",
     "uuid": "^13.0.0",
