@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const URL = 'https://n-of-m-web.vercel.app';
-const OUTPUT_DIR = '/Users/mark.phillips/Developer/n-of-m-web/playwright-report/breakpoints';
+const OUTPUT_DIR = path.join(__dirname, '..', 'playwright-report', 'breakpoints');
 
 const VIEWPORTS = [
   { name: 'iphone-se',        width: 375,  height: 667,  label: 'iPhone SE (375x667)' },

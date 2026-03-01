@@ -17,6 +17,7 @@ describe('wallet', () => {
   });
 
   it('validates known good mnemonic', () => {
+    // BIP39 standard test vector (all-zero entropy) -- not a real wallet
     const phrase = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
     expect(validateMnemonic(phrase)).toBe(true);
   });

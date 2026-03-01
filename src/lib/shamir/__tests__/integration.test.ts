@@ -36,6 +36,7 @@ describe('Shamir Secret Sharing integration', () => {
   });
 
   it('works with 24-word seed phrase', () => {
+    // Test-only mnemonic -- never used with real funds
     const mnemonic =
       'vehicle nasty wrist siege head balcony boring economy cloud stone peace merry hospital cliff dinosaur walnut cat solar diesel horse honey end live gate';
     const secret = Buffer.from(mnemonic);

@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 const BASE_URL = 'http://localhost:4173';
-const DOWNLOADS_DIR = '/Users/mark.phillips/Downloads';
+const DOWNLOADS_DIR = path.join(process.env.HOME || '/tmp', 'Downloads');
 const TEST_PASSWORD = '12345678';
 
 // Increase timeout for these long-running tests

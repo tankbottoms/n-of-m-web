@@ -9,3 +9,7 @@ build
 .playwright-cli
 test-results
 test-*.png
+.dev.vars
+.wrangler/
+playwright-report/
+.omc/
