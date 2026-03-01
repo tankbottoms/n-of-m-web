@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
 routes = [
-  { pattern = "n-of-m.atsignhandle.xyz", custom_domain = true }
+  { pattern = "n-of-m.atsignhandle.xyz/*", zone_name = "atsignhandle.xyz" }
 ]
 
 [observability.logs]
