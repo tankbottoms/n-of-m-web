@@ -14,8 +14,8 @@ const INDEX = join(BUILD_DIR, 'index.html');
 const OUTPUT = join(BUILD_DIR, 'n-of-m-standalone.html');
 
 if (!existsSync(INDEX)) {
-  console.error('build/index.html not found. Run "vite build" first.');
-  process.exit(1);
+  console.log('Skipping standalone bundle: ' + INDEX + ' not found (expected with adapter-cloudflare).');
+  process.exit(0);
 }
 
 // Collect all files recursively
