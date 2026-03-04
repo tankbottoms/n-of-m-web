@@ -69,6 +69,19 @@
     <button class="footer-link" onclick={replaySplash}><i class="fa-thin fa-wand-magic-sparkles"></i> Replay Animation</button>
     <span class="footer-version">v{VERSION}</span>
   </footer>
+
+  {#if mode === 'home'}
+    <div class="app-store-banner">
+      <a href="https://apps.apple.com/us/app/n-of-m-shamirs-secret-sharing/id6759819164" target="_blank" rel="noopener" class="app-store-link">
+        <i class="fa-thin fa-mobile"></i>
+        <span class="app-store-text">
+          <span class="app-store-label">Now on the App Store</span>
+          <span class="app-store-price">$2.99 -- full functionality (price increases to $9.99+ soon)</span>
+        </span>
+        <i class="fa-thin fa-arrow-up-right-from-square app-store-arrow"></i>
+      </a>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -150,5 +163,49 @@
     font-size: 0.65rem;
     color: var(--color-text-muted);
     letter-spacing: 0.1em;
+  }
+  .app-store-banner {
+    max-width: 450px;
+    margin: 10em auto 0;
+  }
+  .app-store-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1rem;
+    border: 1px solid var(--color-accent);
+    background: var(--color-bg-alt);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-decoration: none;
+    box-shadow: 2px 2px 0px var(--color-shadow);
+    transition: box-shadow 0.1s, transform 0.1s;
+  }
+  .app-store-link:hover {
+    box-shadow: 3px 3px 0px var(--color-shadow);
+    transform: translate(-1px, -1px);
+    text-decoration: none;
+  }
+  .app-store-text {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    flex: 1;
+  }
+  .app-store-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.75rem;
+  }
+  .app-store-price {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    margin-top: 0.15rem;
+  }
+  .app-store-arrow {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
   }
 </style>

@@ -29,6 +29,15 @@
     <p class="text-muted text-sm">v{VERSION} -- Shamir's Secret Sharing for Seed Phrases</p>
   </header>
 
+  <div class="app-store-notice">
+    <i class="fa-brands fa-apple"></i>
+    <div>
+      <strong>iOS App Available</strong> --
+      <a href="https://apps.apple.com/us/app/n-of-m-shamirs-secret-sharing/id6759819164" target="_blank" rel="noopener">Download on the App Store</a> for $2.99.
+      Full functionality, native camera scanning, FaceID/TouchID vault. Price increases to $9.99+ soon.
+    </div>
+  </div>
+
   <!-- Table of Contents -->
   <nav class="toc">
     <button class="toc-toggle" onclick={() => { tocExpanded = !tocExpanded; }}>
@@ -801,6 +810,28 @@
   .docs-header .back-link {
     display: inline-block;
     margin-bottom: var(--spacing-md);
+  }
+
+  .app-store-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-accent);
+    background: var(--color-bg-alt);
+    margin-bottom: var(--spacing-xl);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+  .app-store-notice i {
+    font-size: 1.2rem;
+    color: var(--color-accent);
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+  .app-store-notice a {
+    color: var(--color-link);
+    font-weight: 600;
   }
 
   /* TOC */

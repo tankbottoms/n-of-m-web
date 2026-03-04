@@ -56,8 +56,8 @@
     },
     {
       id: 'free',
-      q: 'Is the app free?',
-      a: 'Yes. Both the iOS app and web version are free and open source. There are no in-app purchases, no subscriptions, no ads. The source code is publicly auditable on GitHub.',
+      q: 'How much does the app cost?',
+      a: 'The iOS app is currently $2.99 on the App Store with full functionality -- no in-app purchases, no subscriptions, no ads. A free version limited to 2-of-3 splitting is planned. The full version price will increase to $9.99-$19.99. The web version remains free and open source.',
     },
   ];
 </script>
@@ -84,14 +84,18 @@
     <p class="app-tagline text-muted">Shamir's Secret Sharing with native camera performance</p>
 
     <div class="app-badges mt-md">
+      <a href="https://apps.apple.com/us/app/n-of-m-shamirs-secret-sharing/id6759819164" target="_blank" rel="noopener" class="store-badge store-badge-primary">
+        <i class="fa-brands fa-apple"></i> Download on the App Store
+      </a>
       <a href="https://github.com/tankbottoms/n-of-m" target="_blank" rel="noopener" class="store-badge">
         <i class="fa-thin fa-code-branch"></i> View Source on GitHub
       </a>
     </div>
 
-    <p class="app-note text-xs text-muted mt-sm">
-      Free. No ads. No tracking. Open source.
-    </p>
+    <div class="pricing-note mt-sm">
+      <p class="text-sm"><b>$2.99</b> -- full functionality, no in-app purchases.</p>
+      <p class="text-xs text-muted">A free version (2-of-3 only) is coming soon. Price will increase to $9.99-$19.99.</p>
+    </div>
   </section>
 
   <!-- Why Native -->
@@ -286,11 +290,11 @@
       </div>
       <div class="req-item">
         <span class="req-label">Price</span>
-        <span class="req-value">Free</span>
+        <span class="req-value">$2.99 (introductory)</span>
       </div>
       <div class="req-item">
         <span class="req-label">In-App Purchases</span>
-        <span class="req-value">None</span>
+        <span class="req-value">None -- full functionality included</span>
       </div>
       <div class="req-item">
         <span class="req-label">Network Required</span>
@@ -313,11 +317,14 @@
       <h2>Get Started</h2>
       <p class="text-muted">Split your first seed phrase in under a minute.</p>
       <div class="cta-actions mt-md">
-        <a href="https://github.com/tankbottoms/n-of-m" target="_blank" rel="noopener" class="cta-btn primary">
-          <i class="fa-thin fa-code-branch"></i> Source Code
+        <a href="https://apps.apple.com/us/app/n-of-m-shamirs-secret-sharing/id6759819164" target="_blank" rel="noopener" class="cta-btn primary">
+          <i class="fa-brands fa-apple"></i> App Store -- $2.99
         </a>
         <a href="/" class="cta-btn">
           <i class="fa-thin fa-globe"></i> Use Web Version
+        </a>
+        <a href="https://github.com/tankbottoms/n-of-m" target="_blank" rel="noopener" class="cta-btn">
+          <i class="fa-thin fa-code-branch"></i> Source Code
         </a>
         <a href="/docs" class="cta-btn">
           <i class="fa-thin fa-book"></i> Read Documentation
@@ -429,9 +436,23 @@
     text-decoration: none;
   }
 
-  .app-note {
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+  .store-badge-primary {
+    background: var(--color-accent);
+    color: #fff;
+    border-color: var(--color-accent);
+  }
+  .store-badge-primary:hover {
+    color: #fff;
+  }
+
+  .pricing-note {
+    text-align: center;
+  }
+  .pricing-note p {
+    margin: 0;
+  }
+  .pricing-note p + p {
+    margin-top: 0.25rem;
   }
 
   /* Sections */
