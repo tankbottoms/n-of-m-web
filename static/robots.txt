@@ -1,7 +1,4 @@
-User-agent: Googlebot
-Allow: /
-
 User-agent: *
-Disallow: /
+Allow: /
 
 Sitemap: https://n-of-m.atsignhandle.xyz/sitemap.xml
